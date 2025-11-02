@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Collaborative Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen">
+    <div id="app" class="min-h-screen"></div>
+
+    <script>
+        // State Management
+        let state = {
+            isAuthenticated: false,
+            showLogin: true,
+            username: '',
+            password: '',
+            email: '',
+            currentUser: null,
+            aim: '',
+            steps: { step1: '', step2: '' },
+            phase: 'input',
+            apiResponse: null,
+            isLoading: false
+        };
+
+        // Update State and Re-render
+        function setState(updates) {
+            const needsFullRender = 
+                updates.hasOwnProperty('isAuthenticated') ||
+                updates.hasOwnProperty('showLogin') ||
+                updates.hasOwnProperty('phase');
+            
+            state = { ...state, ...updates };
+            
+            if (needsFullRender) {
+                render();
+            }
+        }
+
+        // API Functions
+        async function handleLogin(e) {
+            e.preventDefault();
+            setState({ isLoading: true });
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: state.username,
+                        password: state.password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    setState({
+                        currentUser: data.username,
+                        isAuthenticated: true,
+                        password: '',
+                        isLoading: false
+                    });
+                } else {
+                    alert(data.message || 'Invalid username or password');
+                    setState({ isLoading: false });
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                alert('Unable to connect to server');
+                setState({ isLoading: false });
+            }
+        }
+
+        async function handleSignup(e) {
+            e.preventDefault();
+            setState({ isLoading: true });
+
+            try {
+                const response = await fetch('/api/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: state.username,
+                        email: state.email,
+                        password: state.password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    alert('Account created! Please login.');
+                    setState({
+                        showLogin: true,
+                        username: '',
+                        password: '',
+                        email: '',
+                        isLoading: false
+                    });
+                } else {
+                    alert(data.message || 'Signup failed');
+                    setState({ isLoading: false });
+                }
+            } catch (error) {
+                console.error('Signup error:', error);
+                alert('Unable to connect to server');
+                setState({ isLoading: false });
+            }
+        }
+
+        async function startPlanning() {
+            setState({ isLoading: true, phase: 'processing' });
+
+            try {
+                const response = await fetch('/api/plan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: state.currentUser,
+                        aim: state.aim,
+                        steps: state.steps
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    setState({
+                        apiResponse: data,
+                        phase: 'results',
+                        isLoading: false
+                    });
+                } else {
+                    alert(data.message || 'Planning failed');
+                    setState({ phase: 'input', isLoading: false });
+                }
+            } catch (error) {
+                console.error('Planning error:', error);
+                alert('Planning failed');
+                setState({ phase: 'input', isLoading: false });
+            }
+        }
+
+        function handleLogout() {
+            setState({
+                isAuthenticated: false,
+                currentUser: null,
+                username: '',
+                password: '',
+                email: '',
+                phase: 'input',
+                aim: '',
+                steps: { step1: '', step2: '' },
+                apiResponse: null
+            });
+        }
+
+        function addStep() {
+            const stepKeys = Object.keys(state.steps);
+            const nextStepNum = stepKeys.length + 1;
+            const newSteps = { ...state.steps };
+            newSteps['step' + nextStepNum] = '';
+            state.steps = newSteps;
+            render();
+        }
+
+        function updateStep(key, value) {
+            state.steps[key] = value;
+        }
+
+        function removeStep(key) {
+            const newSteps = { ...state.steps };
+            delete newSteps[key];
+
+            const stepValues = Object.values(newSteps);
+            const renumberedSteps = {};
+            stepValues.forEach((value, index) => {
+                renumberedSteps['step' + (index + 1)] = value;
+            });
+
+            state.steps = Object.keys(renumberedSteps).length > 0 ? renumberedSteps : { step1: '' };
+            render();
+        }
+
+        function getWinner() {
+            if (!state.apiResponse) return null;
+
+            const agents = Object.keys(state.apiResponse).filter(key => key.startsWith('agent'));
+            let winner = null;
+            let maxAvg = -1;
+
+            agents.forEach(agentKey => {
+                const agent = state.apiResponse[agentKey];
+                const scores = [
+                    agent['1st_score'],
+                    agent['2nd_score'],
+                    agent['3rd_score'],
+                    agent['4th_score'],
+                    agent['5th_score']
+                ].filter(s => s !== undefined && s !== null);
+
+                const avg = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+
+                if (avg > maxAvg) {
+                    maxAvg = avg;
+                    winner = { ...agent, agentKey, avgScore: avg };
+                }
+            });
+
+            return winner;
+        }
+
+        function reset() {
+            setState({
+                phase: 'input',
+                aim: '',
+                steps: { step1: '', step2: '' },
+                apiResponse: null
+            });
+        }
+
+        // Main Render Function
+        function render() {
+            const app = document.getElementById('app');
+            
+            if (!state.isAuthenticated) {
+                app.innerHTML = renderAuthScreen();
+            } else {
+                app.innerHTML = renderMainApp();
+            }
+            
+            attachEventListeners();
+        }
+
+        function renderAuthScreen() {
+            return `
+                <div class="min-h-screen flex items-center justify-center p-8 text-white">
+                    <div class="w-full max-w-md">
+                        <div class="text-center mb-8">
+                            <div class="w-16 h-16 bg-purple-500 rounded-full mx-auto mb-4 flex items-center justify-center text-4xl">🧠</div>
+                            <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-2">AI Planner</h1>
+                            <p class="text-slate-400">Collaborative AI Planning System</p>
+                        </div>
+
+                        <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border border-slate-700 shadow-2xl">
+                            <div class="flex gap-2 mb-6">
+                                <button onclick="setState({ showLogin: true })" class="flex-1 py-2 rounded-lg font-semibold transition-all ${state.showLogin ? 'bg-purple-600 text-white' : 'bg-slate-700 bg-opacity-50 text-slate-400'}">
+                                    Login
+                                </button>
+                                <button onclick="setState({ showLogin: false })" class="flex-1 py-2 rounded-lg font-semibold transition-all ${!state.showLogin ? 'bg-purple-600 text-white' : 'bg-slate-700 bg-opacity-50 text-slate-400'}">
+                                    Sign Up
+                                </button>
+                            </div>
+
+                            <form id="authForm" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2 text-slate-300">Username</label>
+                                    <input type="text" id="username" value="${state.username}" required class="w-full px-4 py-3 bg-slate-900 bg-opacity-50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Enter username" />
+                                </div>
+
+                                ${!state.showLogin ? `
+                                <div>
+                                    <label class="block text-sm font-medium mb-2 text-slate-300">Email</label>
+                                    <input type="email" id="email" value="${state.email}" required class="w-full px-4 py-3 bg-slate-900 bg-opacity-50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Enter email" />
+                                </div>
+                                ` : ''}
+
+                                <div>
+                                    <label class="block text-sm font-medium mb-2 text-slate-300">Password</label>
+                                    <input type="password" id="password" value="${state.password}" required class="w-full px-4 py-3 bg-slate-900 bg-opacity-50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Enter password" />
+                                </div>
+
+                                <button type="submit" ${state.isLoading ? 'disabled' : ''} class="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-slate-600 disabled:to-slate-600 rounded-xl font-semibold transition-all shadow-lg">
+                                    ${state.isLoading ? 'Processing...' : state.showLogin ? 'Login' : 'Sign Up'}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderMainApp() {
+            return `
+                <div class="p-8">
+                    <div class="max-w-7xl mx-auto text-white">
+                        <div class="flex items-center justify-between mb-8 flex-wrap gap-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-2xl">🧠</div>
+                                <div>
+                                    <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">AI Collaborative Planner</h1>
+                                    <p class="text-slate-400 text-sm">5 AI Agents • 4 Improvement Rounds</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="flex items-center gap-2 px-4 py-2 bg-slate-800 bg-opacity-50 rounded-lg border border-slate-700">
+                                    <span class="text-2xl">👤</span>
+                                    <span class="text-slate-300">${state.currentUser}</span>
+                                </div>
+                                <button onclick="handleLogout()" class="flex items-center gap-2 px-4 py-2 bg-red-500 bg-opacity-20 hover:bg-opacity-30 rounded-lg transition-colors text-red-400">
+                                    <span>Logout</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        ${state.phase === 'input' ? renderInputPhase() : ''}
+                        ${state.phase === 'processing' ? renderProcessingPhase() : ''}
+                        ${state.phase === 'results' ? renderResultsPhase() : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderInputPhase() {
+            const isFormValid = state.aim && Object.values(state.steps).every(s => s);
+            
+            return `
+                <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border border-slate-700 shadow-2xl">
+                    <div class="mb-8">
+                        <label class="flex items-center gap-2 text-xl font-semibold mb-3">
+                            <span class="text-2xl">🎯</span>
+                            Your Goal
+                        </label>
+                        <input type="text" id="aim" value="${state.aim}" placeholder="Enter your main objective..." class="w-full px-6 py-4 bg-slate-900 bg-opacity-50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg" />
+                    </div>
+
+                    <div class="mb-8">
+                        <label class="flex items-center gap-2 text-xl font-semibold mb-3">
+                            <span class="text-2xl">➡️</span>
+                            Initial Steps
+                        </label>
+                        <div id="stepsContainer">
+                            ${Object.entries(state.steps).map(([key, value], index) => `
+                                <div class="flex gap-3 mb-3">
+                                    <input type="text" data-step-key="${key}" value="${value}" placeholder="Step ${index + 1}..." class="flex-1 px-6 py-3 bg-slate-900 bg-opacity-50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                                    ${Object.keys(state.steps).length > 1 ? `
+                                        <button onclick="removeStep('${key}')" class="px-4 py-3 bg-red-500 bg-opacity-20 hover:bg-opacity-30 rounded-xl transition-colors text-red-400 font-bold">
+                                            ✕
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button onclick="addStep()" class="flex items-center gap-2 px-6 py-3 bg-purple-500 bg-opacity-20 hover:bg-opacity-30 rounded-xl transition-colors text-purple-300">
+                            <span class="text-xl">➕</span>
+                            Add Step
+                        </button>
+                    </div>
+
+                    <button onclick="startPlanning()" ${!isFormValid || state.isLoading ? 'disabled' : ''} class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-slate-600 disabled:to-slate-600 rounded-xl font-semibold text-lg transition-all shadow-lg">
+                        ${state.isLoading ? 'Processing...' : '✨ Start AI Planning'}
+                    </button>
+                </div>
+            `;
+        }
+
+        function renderProcessingPhase() {
+            return `
+                <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border border-slate-700 shadow-2xl text-center">
+                    <div class="text-6xl mb-6">🧠</div>
+                    <h2 class="text-3xl font-bold mb-4">AI Agents Working...</h2>
+                    <p class="text-slate-300 text-lg">5 AI agents are analyzing and improving your plan</p>
+                </div>
+            `;
+        }
+
+        function renderResultsPhase() {
+            const winner = getWinner();
+            const agents = Object.keys(state.apiResponse || {}).filter(key => key.startsWith('agent'));
+
+            return `
+                <div class="space-y-6">
+                    ${winner ? `
+                        <div class="bg-gradient-to-r from-yellow-500 from-opacity-20 to-orange-500 to-opacity-20 backdrop-blur-lg rounded-2xl p-8 border border-yellow-500 border-opacity-30 shadow-2xl">
+                            <div class="text-center mb-6">
+                                <div class="text-6xl mb-4">🏆</div>
+                                <h2 class="text-4xl font-bold mb-2">Winner: ${winner.agentKey.replace('agent', 'AI Agent ')}</h2>
+                                <p class="text-3xl text-yellow-400 font-bold mb-4">Average Score: ${winner.avgScore.toFixed(1)}</p>
+                            </div>
+
+                            <div class="bg-slate-900 bg-opacity-50 rounded-xl p-6 mt-6">
+                                <h3 class="text-xl font-semibold mb-4 text-yellow-400">Winning Plan Steps:</h3>
+                                <div class="space-y-3">
+                                    ${Object.entries(winner.steps || {}).map(([key, step], idx) => `
+                                        <div class="flex items-start gap-3">
+                                            <div class="w-8 h-8 rounded-full bg-yellow-500 bg-opacity-20 flex items-center justify-center flex-shrink-0">
+                                                <span class="text-yellow-400 font-bold">${idx + 1}</span>
+                                            </div>
+                                            <span class="text-slate-200 text-lg">${step}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        ${agents.map(agentKey => {
+                            const agentData = state.apiResponse[agentKey];
+                            const scores = [
+                                agentData['1st_score'],
+                                agentData['2nd_score'],
+                                agentData['3rd_score'],
+                                agentData['4th_score'],
+                                agentData['5th_score']
+                            ].filter(s => s !== undefined && s !== null);
+                            
+                            const avgScore = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+                            const isWinner = winner && winner.agentKey === agentKey;
+                            
+                            return `
+                                <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-xl p-6 border ${isWinner ? 'border-yellow-500 ring-2 ring-yellow-500 ring-opacity-50' : 'border-slate-700'}">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <h3 class="font-semibold text-lg">${agentKey.replace('agent', 'AI Agent ')}</h3>
+                                        ${isWinner ? '<span class="text-2xl">🏆</span>' : ''}
+                                    </div>
+                                    
+                                    <div class="mb-4">
+                                        <div class="text-3xl font-bold mb-2">
+                                            <span class="text-purple-400">${avgScore.toFixed(1)}</span>
+                                            <span class="text-sm text-slate-400 ml-2">avg score</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <h4 class="text-xs font-semibold text-slate-500 uppercase mb-2">Action Plan:</h4>
+                                        <div class="space-y-2">
+                                            ${Object.entries(agentData.steps || {}).map(([key, step], idx) => `
+                                                <div class="text-sm text-slate-300 flex items-start gap-2 bg-slate-900 bg-opacity-30 p-2 rounded">
+                                                    <span class="text-purple-400 font-bold flex-shrink-0">${idx + 1}.</span>
+                                                    <span>${step}</span>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-2">
+                                        <h4 class="text-xs font-semibold text-slate-500 uppercase">Scores:</h4>
+                                        <div class="flex flex-wrap gap-2">
+                                            ${scores.map((score, idx) => `
+                                                <div class="px-3 py-1 bg-slate-900 bg-opacity-50 rounded-lg text-sm">
+                                                    <span class="text-slate-400">R${idx + 1}:</span>
+                                                    <span class="ml-2 font-bold text-purple-400">${score}</span>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+
+                    <button onclick="reset()" class="w-full py-4 bg-slate-700 hover:bg-slate-600 rounded-xl font-semibold text-lg transition-all">
+                        ⚡ Start New Plan
+                    </button>
+                </div>
+            `;
+        }
+
+        function attachEventListeners() {
+            const authForm = document.getElementById('authForm');
+            if (authForm) {
+                authForm.onsubmit = state.showLogin ? handleLogin : handleSignup;
+            }
+
+            const usernameInput = document.getElementById('username');
+            if (usernameInput) {
+                usernameInput.oninput = (e) => {
+                    state.username = e.target.value;
+                };
+            }
+
+            const emailInput = document.getElementById('email');
+            if (emailInput) {
+                emailInput.oninput = (e) => {
+                    state.email = e.target.value;
+                };
+            }
+
+            const passwordInput = document.getElementById('password');
+            if (passwordInput) {
+                passwordInput.oninput = (e) => {
+                    state.password = e.target.value;
+                };
+            }
+
+            const aimInput = document.getElementById('aim');
+            if (aimInput) {
+                aimInput.oninput = (e) => {
+                    state.aim = e.target.value;
+                };
+            }
+
+            const stepInputs = document.querySelectorAll('[data-step-key]');
+            stepInputs.forEach(input => {
+                input.oninput = (e) => {
+                    const key = e.target.getAttribute('data-step-key');
+                    state.steps[key] = e.target.value;
+                };
+            });
+        }
+
+        // Initial Render
+        document.addEventListener('DOMContentLoaded', function() {
+            render();
+        });
+        
+        // Also render immediately
+        render();
+    </script>
+</body>
+</html>
