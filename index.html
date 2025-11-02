@@ -305,7 +305,10 @@
         }
 
         function renderInputPhase() {
-            const isFormValid = state.aim && Object.values(state.steps).every(s => s);
+            // Check if all fields have content (not empty after trimming)
+            const isAimValid = state.aim.trim().length > 0;
+            const areStepsValid = Object.values(state.steps).every(s => s.trim().length > 0);
+            const isFormValid = isAimValid && areStepsValid;
             
             return `
                 <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border border-slate-700 shadow-2xl">
@@ -340,9 +343,10 @@
                         </button>
                     </div>
 
-                    <button onclick="startPlanning()" ${!isFormValid || state.isLoading ? 'disabled' : ''} class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-slate-600 disabled:to-slate-600 rounded-xl font-semibold text-lg transition-all shadow-lg">
+                    <button onclick="startPlanning()" ${!isFormValid || state.isLoading ? 'disabled' : ''} class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed rounded-xl font-semibold text-lg transition-all shadow-lg">
                         ${state.isLoading ? 'Processing...' : '✨ Start AI Planning'}
                     </button>
+                    ${!isFormValid ? '<p class="text-sm text-red-400 mt-2 text-center">Please fill all fields to continue</p>' : ''}
                 </div>
             `;
         }
