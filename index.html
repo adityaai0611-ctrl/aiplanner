@@ -305,7 +305,6 @@
         }
 
         function renderInputPhase() {
-            // Check if all fields have content (not empty after trimming)
             const isAimValid = state.aim.trim().length > 0;
             const areStepsValid = Object.values(state.steps).every(s => s.trim().length > 0);
             const isFormValid = isAimValid && areStepsValid;
@@ -343,10 +342,10 @@
                         </button>
                     </div>
 
-                    <button onclick="startPlanning()" ${!isFormValid || state.isLoading ? 'disabled' : ''} class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed rounded-xl font-semibold text-lg transition-all shadow-lg">
+                    <button id="planButton" onclick="startPlanning()" ${!isFormValid || state.isLoading ? 'disabled' : ''} class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed rounded-xl font-semibold text-lg transition-all shadow-lg">
                         ${state.isLoading ? 'Processing...' : '✨ Start AI Planning'}
                     </button>
-                    ${!isFormValid ? '<p class="text-sm text-red-400 mt-2 text-center">Please fill all fields to continue</p>' : ''}
+                    <p id="errorMsg" style="display: ${isFormValid ? 'none' : 'block'}" class="text-sm text-red-400 mt-2 text-center">Please fill all fields to continue</p>
                 </div>
             `;
         }
@@ -487,6 +486,7 @@
             if (aimInput) {
                 aimInput.oninput = (e) => {
                     state.aim = e.target.value;
+                    updateButtonState();
                 };
             }
 
@@ -495,8 +495,23 @@
                 input.oninput = (e) => {
                     const key = e.target.getAttribute('data-step-key');
                     state.steps[key] = e.target.value;
+                    updateButtonState();
                 };
             });
+        }
+
+        function updateButtonState() {
+            const button = document.querySelector('#planButton');
+            const errorMsg = document.querySelector('#errorMsg');
+            
+            if (button && errorMsg) {
+                const isAimValid = state.aim.trim().length > 0;
+                const areStepsValid = Object.values(state.steps).every(s => s.trim().length > 0);
+                const isFormValid = isAimValid && areStepsValid;
+                
+                button.disabled = !isFormValid || state.isLoading;
+                errorMsg.style.display = isFormValid ? 'none' : 'block';
+            }
         }
 
         // Initial Render
