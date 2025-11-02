@@ -45,7 +45,7 @@
             setState({ isLoading: true });
 
             try {
-                const response = await fetch('/api/login', {
+                const response = await fetch('http://localhost:5000/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -79,7 +79,7 @@
             setState({ isLoading: true });
 
             try {
-                const response = await fetch('/api/signup', {
+                const response = await fetch('http://localhost:5000/api/signup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -115,7 +115,7 @@
             setState({ isLoading: true, phase: 'processing' });
 
             try {
-                const response = await fetch('/api/plan', {
+                const response = await fetch('http://localhost:5000/api/plan', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -161,9 +161,7 @@
         function addStep() {
             const stepKeys = Object.keys(state.steps);
             const nextStepNum = stepKeys.length + 1;
-            const newSteps = { ...state.steps };
-            newSteps['step' + nextStepNum] = '';
-            state.steps = newSteps;
+            state.steps['step' + nextStepNum] = '';
             render();
         }
 
@@ -194,15 +192,7 @@
 
             agents.forEach(agentKey => {
                 const agent = state.apiResponse[agentKey];
-                const scores = [
-                    agent['1st_score'],
-                    agent['2nd_score'],
-                    agent['3rd_score'],
-                    agent['4th_score'],
-                    agent['5th_score']
-                ].filter(s => s !== undefined && s !== null);
-
-                const avg = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+                const avg = agent.average_score || 0;
 
                 if (avg > maxAvg) {
                     maxAvg = avg;
@@ -292,7 +282,7 @@
                                 <div class="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-2xl">🧠</div>
                                 <div>
                                     <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">AI Collaborative Planner</h1>
-                                    <p class="text-slate-400 text-sm">5 AI Agents • 4 Improvement Rounds</p>
+                                    <p class="text-slate-400 text-sm">12 AI Agents • Unlimited Improvements</p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-4">
@@ -362,7 +352,8 @@
                 <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border border-slate-700 shadow-2xl text-center">
                     <div class="text-6xl mb-6">🧠</div>
                     <h2 class="text-3xl font-bold mb-4">AI Agents Working...</h2>
-                    <p class="text-slate-300 text-lg">5 AI agents are analyzing and improving your plan</p>
+                    <p class="text-slate-300 text-lg">12 AI agents are analyzing and improving your plan</p>
+                    <p class="text-slate-400 text-sm mt-2">This may take 2-5 minutes...</p>
                 </div>
             `;
         }
@@ -377,8 +368,10 @@
                         <div class="bg-gradient-to-r from-yellow-500 from-opacity-20 to-orange-500 to-opacity-20 backdrop-blur-lg rounded-2xl p-8 border border-yellow-500 border-opacity-30 shadow-2xl">
                             <div class="text-center mb-6">
                                 <div class="text-6xl mb-4">🏆</div>
-                                <h2 class="text-4xl font-bold mb-2">Winner: ${winner.agentKey.replace('agent', 'AI Agent ')}</h2>
+                                <h2 class="text-4xl font-bold mb-2">Winner: AI Agent ${winner.agentKey.replace('agent', '')}</h2>
+                                <p class="text-2xl text-slate-300 mb-1">${winner.agent_name ? winner.agent_name.toUpperCase() : ''}</p>
                                 <p class="text-3xl text-yellow-400 font-bold mb-4">Average Score: ${winner.avgScore.toFixed(1)}</p>
+                                <p class="text-slate-400">Original: ${winner.original_score} → Final: ${winner.final_score} (${winner.total_improvements} improvements)</p>
                             </div>
 
                             <div class="bg-slate-900 bg-opacity-50 rounded-xl p-6 mt-6">
@@ -400,21 +393,16 @@
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         ${agents.map(agentKey => {
                             const agentData = state.apiResponse[agentKey];
-                            const scores = [
-                                agentData['1st_score'],
-                                agentData['2nd_score'],
-                                agentData['3rd_score'],
-                                agentData['4th_score'],
-                                agentData['5th_score']
-                            ].filter(s => s !== undefined && s !== null);
-                            
-                            const avgScore = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+                            const avgScore = agentData.average_score || 0;
                             const isWinner = winner && winner.agentKey === agentKey;
                             
                             return `
                                 <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-xl p-6 border ${isWinner ? 'border-yellow-500 ring-2 ring-yellow-500 ring-opacity-50' : 'border-slate-700'}">
                                     <div class="flex items-center justify-between mb-4">
-                                        <h3 class="font-semibold text-lg">${agentKey.replace('agent', 'AI Agent ')}</h3>
+                                        <div>
+                                            <h3 class="font-semibold text-lg">AI Agent ${agentKey.replace('agent', '')}</h3>
+                                            <p class="text-sm text-slate-400">${agentData.agent_name ? agentData.agent_name.toUpperCase() : ''}</p>
+                                        </div>
                                         ${isWinner ? '<span class="text-2xl">🏆</span>' : ''}
                                     </div>
                                     
@@ -423,11 +411,15 @@
                                             <span class="text-purple-400">${avgScore.toFixed(1)}</span>
                                             <span class="text-sm text-slate-400 ml-2">avg score</span>
                                         </div>
+                                        <div class="text-sm text-slate-400">
+                                            Original: ${agentData.original_score} → Final: ${agentData.final_score}
+                                            <span class="text-green-400 ml-2">+${agentData.final_score - agentData.original_score}</span>
+                                        </div>
                                     </div>
 
                                     <div class="mb-4">
-                                        <h4 class="text-xs font-semibold text-slate-500 uppercase mb-2">Action Plan:</h4>
-                                        <div class="space-y-2">
+                                        <h4 class="text-xs font-semibold text-slate-500 uppercase mb-2">Action Plan (${Object.keys(agentData.steps || {}).length} steps):</h4>
+                                        <div class="space-y-2 max-h-60 overflow-y-auto">
                                             ${Object.entries(agentData.steps || {}).map(([key, step], idx) => `
                                                 <div class="text-sm text-slate-300 flex items-start gap-2 bg-slate-900 bg-opacity-30 p-2 rounded">
                                                     <span class="text-purple-400 font-bold flex-shrink-0">${idx + 1}.</span>
@@ -438,11 +430,11 @@
                                     </div>
 
                                     <div class="space-y-2">
-                                        <h4 class="text-xs font-semibold text-slate-500 uppercase">Scores:</h4>
-                                        <div class="flex flex-wrap gap-2">
-                                            ${scores.map((score, idx) => `
-                                                <div class="px-3 py-1 bg-slate-900 bg-opacity-50 rounded-lg text-sm">
-                                                    <span class="text-slate-400">R${idx + 1}:</span>
+                                        <h4 class="text-xs font-semibold text-slate-500 uppercase">Score Progress (${agentData.total_improvements} improvements):</h4>
+                                        <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                                            ${(agentData.all_improvement_scores || []).map((score, idx) => `
+                                                <div class="px-3 py-1 bg-slate-900 bg-opacity-50 rounded-lg text-sm ${idx === 0 ? 'border border-blue-400' : ''}">
+                                                    <span class="text-slate-400">${idx === 0 ? 'Orig' : `R${idx}`}:</span>
                                                     <span class="ml-2 font-bold text-purple-400">${score}</span>
                                                 </div>
                                             `).join('')}
@@ -508,7 +500,6 @@
             render();
         });
         
-        // Also render immediately
         render();
     </script>
 </body>
