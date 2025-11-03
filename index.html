@@ -3,14 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Collaborative Planner</title>
+    <title>AI Planner - Enhanced Real-time</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .slide-up {
+            animation: slideUp 0.5s ease-out;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .pulse-animate {
+            animation: pulse 2s infinite;
+        }
+
+        .scroll-smooth {
+            scroll-behavior: smooth;
+        }
+
+        .mini-plan-card {
+            transition: all 0.3s ease;
+        }
+
+        .mini-plan-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(139, 92, 246, 0.3);
+        }
+
+        .step-item {
+            animation: slideUp 0.4s ease-out;
+            animation-fill-mode: both;
+        }
+
+        .step-item:nth-child(1) { animation-delay: 0.1s; }
+        .step-item:nth-child(2) { animation-delay: 0.2s; }
+        .step-item:nth-child(3) { animation-delay: 0.3s; }
+        .step-item:nth-child(4) { animation-delay: 0.4s; }
+        .step-item:nth-child(5) { animation-delay: 0.5s; }
+
+        .parameter-badge {
+            animation: fadeIn 0.3s ease-in;
+            animation-fill-mode: both;
+        }
+
+        .analytics-card {
+            backdrop-filter: blur(10px);
+        }
+    </style>
 </head>
 <body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen">
     <div id="app" class="min-h-screen"></div>
 
     <script>
-        // State Management
         let state = {
             isAuthenticated: false,
             showLogin: true,
@@ -22,10 +88,16 @@
             steps: { step1: '', step2: '' },
             phase: 'input',
             apiResponse: null,
-            isLoading: false
+            isLoading: false,
+            // Enhanced real-time tracking
+            realtimeEvents: [],
+            currentPhase: null,
+            agentProgress: {},
+            liveAgentPlans: {},
+            analyticsData: {},
+            eventSource: null
         };
 
-        // Update State and Re-render
         function setState(updates) {
             const needsFullRender = 
                 updates.hasOwnProperty('isAuthenticated') ||
@@ -39,7 +111,565 @@
             }
         }
 
-        // API Functions
+        async function startPlanning() {
+            setState({ 
+                isLoading: true, 
+                phase: 'processing',
+                realtimeEvents: [],
+                agentProgress: {},
+                liveAgentPlans: {},
+                analyticsData: {}
+            });
+
+            try {
+                const response = await fetch('http://localhost:5000/api/plan/stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: state.currentUser,
+                        aim: state.aim,
+                        steps: state.steps
+                    })
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const eventData = JSON.parse(line.substring(6));
+                            handleRealtimeEvent(eventData);
+                        }
+                    }
+                }
+
+            } catch (error) {
+                console.error('Streaming error:', error);
+                alert('Planning failed: ' + error.message);
+                setState({ phase: 'input', isLoading: false });
+            }
+        }
+
+        function parseStepsFromPlan(planText) {
+            if (!planText) return [];
+            
+            const steps = [];
+            const lines = planText.split('\n');
+            
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (trimmed && (
+                    trimmed.startsWith('-') || 
+                    trimmed.startsWith('•') || 
+                    /^\d+\./.test(trimmed) ||
+                    /^step\s*\d+/i.test(trimmed)
+                )) {
+                    let step = trimmed
+                        .replace(/^[-•]/, '')
+                        .replace(/^\d+\./, '')
+                        .replace(/^step\s*\d+:?/i, '')
+                        .trim();
+                    
+                    if (step) {
+                        steps.push(step);
+                    }
+                }
+            }
+            
+            return steps;
+        }
+
+        function handleRealtimeEvent(event) {
+            console.log('Real-time event:', event);
+            state.realtimeEvents.push(event);
+
+            const timestamp = new Date();
+
+            switch(event.type) {
+                case 'connected':
+                    addLogMessage('✅ Connected to AI Planning System', 'success');
+                    break;
+
+                case 'process_start':
+                    addLogMessage(`🚀 Starting planning for ${event.data.agents_count} AI agents`, 'info');
+                    state.analyticsData.processStartTime = timestamp;
+                    break;
+
+                case 'phase_start':
+                    state.currentPhase = event.data.phase;
+                    addLogMessage(`📍 Phase ${event.data.phase}: ${event.data.description}`, 'info');
+                    updateProcessingDisplay();
+                    break;
+
+                case 'agent_start':
+                    addLogMessage(`🤖 ${event.data.agent.toUpperCase()} - Starting plan generation`, 'agent');
+                    state.liveAgentPlans[event.data.agent] = {
+                        status: 'generating',
+                        mini_plans: [],
+                        final_plan: null,
+                        steps: [],
+                        score: null,
+                        startTime: timestamp,
+                        parameters_used: []
+                    };
+                    updateAgentProgress(event.data.agent, 'generating', 0);
+                    updateLivePlansDisplay();
+                    break;
+
+                case 'mini_plan_start':
+                    addLogMessage(`  🔍 ${event.data.agent.toUpperCase()} - Processing group ${event.data.group}/${event.data.total_groups}`, 'progress');
+                    
+                    if (state.liveAgentPlans[event.data.agent]) {
+                        const miniPlanData = {
+                            group: event.data.group,
+                            startTime: timestamp,
+                            status: 'processing',
+                            parameters: event.data.parameters || []
+                        };
+                        
+                        if (!state.liveAgentPlans[event.data.agent].current_mini_plan) {
+                            state.liveAgentPlans[event.data.agent].current_mini_plan = miniPlanData;
+                        }
+                    }
+                    
+                    updateAgentProgress(event.data.agent, 'generating', event.data.progress);
+                    updateLivePlansDisplay();
+                    break;
+
+                case 'mini_plan_complete':
+                    const completionTime = timestamp;
+                    const agent = event.data.agent;
+                    
+                    addLogMessage(`  ✅ ${agent.toUpperCase()} - Group ${event.data.group} completed`, 'success');
+                    
+                    if (state.liveAgentPlans[agent]) {
+                        const miniPlan = state.liveAgentPlans[agent].current_mini_plan || {};
+                        const duration = miniPlan.startTime ? 
+                            ((completionTime - miniPlan.startTime) / 1000).toFixed(2) : 0;
+                        
+                        const completedMiniPlan = {
+                            group: event.data.group,
+                            preview: event.data.mini_plan,
+                            steps: parseStepsFromPlan(event.data.mini_plan),
+                            startTime: miniPlan.startTime || completionTime,
+                            endTime: completionTime,
+                            duration: duration,
+                            parameters: event.data.parameters || miniPlan.parameters || [],
+                            status: 'completed'
+                        };
+                        
+                        state.liveAgentPlans[agent].mini_plans.push(completedMiniPlan);
+                        state.liveAgentPlans[agent].current_mini_plan = null;
+                    }
+                    
+                    updateAgentProgress(event.data.agent, 'generating', event.data.progress);
+                    updateLivePlansDisplay();
+                    scrollToLatestMiniPlan(agent);
+                    break;
+
+                case 'summarizing':
+                    addLogMessage(`  📋 ${event.data.agent.toUpperCase()} - Summarizing ${event.data.mini_plans_count} mini-plans`, 'info');
+                    if (state.liveAgentPlans[event.data.agent]) {
+                        state.liveAgentPlans[event.data.agent].status = 'summarizing';
+                    }
+                    updateLivePlansDisplay();
+                    break;
+
+                case 'agent_complete':
+                    addLogMessage(`  🎉 ${event.data.agent.toUpperCase()} - Plan complete! Score: ${event.data.score}/100`, 'success');
+                    
+                    if (state.liveAgentPlans[event.data.agent]) {
+                        const agentData = state.liveAgentPlans[event.data.agent];
+                        agentData.final_plan = event.data.plan;
+                        agentData.steps = parseStepsFromPlan(event.data.plan);
+                        agentData.score = event.data.score;
+                        agentData.status = 'complete';
+                        agentData.endTime = timestamp;
+                        
+                        const totalDuration = agentData.startTime ? 
+                            ((timestamp - agentData.startTime) / 1000).toFixed(2) : 0;
+                        agentData.totalDuration = totalDuration;
+                    }
+                    
+                    updateAgentProgress(event.data.agent, 'complete', 100, event.data.score);
+                    updateLivePlansDisplay();
+                    break;
+
+                case 'improvement_chain_start':
+                    addLogMessage(`🔄 Starting improvement chain for ${event.data.original_agent.toUpperCase()}`, 'info');
+                    if (state.liveAgentPlans[event.data.original_agent]) {
+                        state.liveAgentPlans[event.data.original_agent].status = 'improving';
+                        state.liveAgentPlans[event.data.original_agent].improvements = [];
+                    }
+                    updateLivePlansDisplay();
+                    break;
+
+                case 'improvement_start':
+                    addLogMessage(`  🔧 ${event.data.improving_agent.toUpperCase()} improving ${event.data.original_agent.toUpperCase()}'s plan (${event.data.step}/${event.data.total_steps})`, 'progress');
+                    break;
+
+                case 'improvement_complete':
+                    addLogMessage(`  ✨ ${event.data.improving_agent.toUpperCase()} improved to score: ${event.data.score}`, 'success');
+                    
+                    if (state.liveAgentPlans[event.data.original_agent]) {
+                        const improvement = {
+                            by_agent: event.data.improving_agent,
+                            step: event.data.step,
+                            score: event.data.score,
+                            plan_preview: event.data.plan_preview,
+                            steps: parseStepsFromPlan(event.data.plan_preview),
+                            timestamp: timestamp
+                        };
+                        
+                        if (!state.liveAgentPlans[event.data.original_agent].improvements) {
+                            state.liveAgentPlans[event.data.original_agent].improvements = [];
+                        }
+                        state.liveAgentPlans[event.data.original_agent].improvements.push(improvement);
+                    }
+                    
+                    updateAgentProgress(event.data.original_agent, 'improving', 
+                        (event.data.step / 11) * 100, event.data.score);
+                    updateLivePlansDisplay();
+                    break;
+
+                case 'improvement_chain_complete':
+                    addLogMessage(`  🏁 ${event.data.original_agent.toUpperCase()} - Final score: ${event.data.final_score} (avg: ${event.data.average_score.toFixed(1)})`, 'success');
+                    
+                    if (state.liveAgentPlans[event.data.original_agent]) {
+                        state.liveAgentPlans[event.data.original_agent].final_score = event.data.final_score;
+                        state.liveAgentPlans[event.data.original_agent].average_score = event.data.average_score;
+                        state.liveAgentPlans[event.data.original_agent].all_scores = event.data.all_scores;
+                        state.liveAgentPlans[event.data.original_agent].status = 'improved';
+                    }
+                    updateLivePlansDisplay();
+                    break;
+
+                case 'process_complete':
+                    addLogMessage(`🎊 Planning complete! ${event.data.total_agents} agents finished`, 'success');
+                    state.analyticsData.processEndTime = timestamp;
+                    setState({ 
+                        apiResponse: event.data.result,
+                        phase: 'results',
+                        isLoading: false
+                    });
+                    break;
+
+                case 'error':
+                    addLogMessage(`❌ Error: ${event.data.message}`, 'error');
+                    setState({ phase: 'input', isLoading: false });
+                    break;
+            }
+        }
+
+        function scrollToLatestMiniPlan(agent) {
+            setTimeout(() => {
+                const container = document.getElementById(`agent-${agent}-plans`);
+                if (container) {
+                    const cards = container.querySelectorAll('.mini-plan-card');
+                    if (cards.length > 0) {
+                        cards[cards.length - 1].scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'nearest' 
+                        });
+                    }
+                }
+            }, 100);
+        }
+
+        function addLogMessage(message, type) {
+            const logContainer = document.getElementById('realtimeLog');
+            if (logContainer) {
+                const colors = {
+                    'success': 'text-green-400',
+                    'error': 'text-red-400',
+                    'info': 'text-blue-400',
+                    'agent': 'text-purple-400',
+                    'progress': 'text-yellow-400'
+                };
+
+                const logEntry = document.createElement('div');
+                logEntry.className = `text-sm ${colors[type] || 'text-slate-300'} mb-1 font-mono fade-in`;
+                logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                logContainer.appendChild(logEntry);
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+        }
+
+        function updateAgentProgress(agent, status, progress, score) {
+            state.agentProgress[agent] = { status, progress, score };
+            updateProgressBars();
+        }
+
+        function updateProgressBars() {
+            const progressContainer = document.getElementById('agentProgressContainer');
+            if (!progressContainer) return;
+
+            const agents = Object.keys(state.agentProgress);
+            progressContainer.innerHTML = agents.map(agent => {
+                const { status, progress, score } = state.agentProgress[agent];
+                const statusEmoji = {
+                    'generating': '⏳',
+                    'improving': '🔄',
+                    'complete': '✅'
+                };
+
+                return `
+                    <div class="bg-slate-800 bg-opacity-30 rounded-lg p-3 mb-2 slide-up">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-semibold text-purple-300">
+                                ${statusEmoji[status] || '⏳'} ${agent.toUpperCase()}
+                            </span>
+                            ${score ? `<span class="text-xs text-green-400 font-bold">Score: ${score}</span>` : ''}
+                        </div>
+                        <div class="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
+                            <div class="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-500" 
+                                 style="width: ${progress}%"></div>
+                        </div>
+                        <div class="text-xs text-slate-400 mt-1">${Math.round(progress)}% - ${status}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateLivePlansDisplay() {
+            const plansContainer = document.getElementById('livePlansContainer');
+            if (!plansContainer) return;
+
+            const agents = Object.keys(state.liveAgentPlans);
+            plansContainer.innerHTML = agents.map(agent => {
+                const planData = state.liveAgentPlans[agent];
+                return renderAgentPlanCard(agent, planData);
+            }).join('');
+        }
+
+        function renderAgentPlanCard(agent, planData) {
+            const statusIcons = {
+                'generating': '⏳',
+                'summarizing': '📋',
+                'complete': '✅',
+                'improving': '🔄',
+                'improved': '🎯'
+            };
+
+            const statusColors = {
+                'generating': 'bg-yellow-500',
+                'summarizing': 'bg-blue-500',
+                'complete': 'bg-green-500',
+                'improving': 'bg-purple-500',
+                'improved': 'bg-pink-500'
+            };
+
+            return `
+                <div class="bg-slate-800 bg-opacity-50 rounded-xl p-5 mb-4 border border-slate-700 slide-up">
+                    <!-- Agent Header -->
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full ${statusColors[planData.status]} bg-opacity-20 flex items-center justify-center">
+                                <span class="text-2xl">${statusIcons[planData.status]}</span>
+                            </div>
+                            <div>
+                                <h4 class="text-lg font-bold text-purple-300">${agent.toUpperCase()}</h4>
+                                <p class="text-xs text-slate-400">${planData.status}</p>
+                            </div>
+                        </div>
+                        ${planData.score ? `
+                            <div class="px-4 py-2 bg-green-500 bg-opacity-20 rounded-lg border border-green-500 border-opacity-30">
+                                <div class="text-2xl font-bold text-green-400">${planData.score}</div>
+                                <div class="text-xs text-slate-400">score</div>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <!-- Analytics Bar -->
+                    ${planData.totalDuration || planData.mini_plans.length > 0 ? `
+                        <div class="grid grid-cols-3 gap-3 mb-4">
+                            <div class="bg-slate-900 bg-opacity-30 rounded-lg p-3">
+                                <div class="text-xs text-slate-400">Mini-plans</div>
+                                <div class="text-lg font-bold text-purple-400">${planData.mini_plans.length}</div>
+                            </div>
+                            <div class="bg-slate-900 bg-opacity-30 rounded-lg p-3">
+                                <div class="text-xs text-slate-400">Total Steps</div>
+                                <div class="text-lg font-bold text-blue-400">${planData.steps.length || '-'}</div>
+                            </div>
+                            <div class="bg-slate-900 bg-opacity-30 rounded-lg p-3">
+                                <div class="text-xs text-slate-400">Duration</div>
+                                <div class="text-lg font-bold text-yellow-400">${planData.totalDuration ? planData.totalDuration + 's' : '-'}</div>
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Mini Plans Section -->
+                    ${planData.mini_plans.length > 0 ? `
+                        <div class="mb-4" id="agent-${agent}-plans">
+                            <div class="flex items-center justify-between mb-3">
+                                <h5 class="text-sm font-semibold text-purple-400">📋 Mini-Plans Generated</h5>
+                                <span class="text-xs text-slate-500">${planData.mini_plans.length} groups</span>
+                            </div>
+                            <div class="space-y-3 max-h-96 overflow-y-auto scroll-smooth pr-2">
+                                ${planData.mini_plans.map((mp, idx) => `
+                                    <div class="mini-plan-card bg-slate-900 bg-opacity-40 rounded-lg p-4 border border-slate-700">
+                                        <!-- Mini Plan Header -->
+                                        <div class="flex items-center justify-between mb-3">
+                                            <div class="flex items-center gap-2">
+                                                <span class="w-6 h-6 rounded-full bg-purple-500 bg-opacity-20 flex items-center justify-center text-xs font-bold text-purple-400">
+                                                    ${mp.group}
+                                                </span>
+                                                <span class="text-sm font-semibold text-slate-300">Group ${mp.group}</span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-xs text-green-400">⏱️ ${mp.duration}s</span>
+                                                <span class="text-xs text-slate-500">${mp.steps.length} steps</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Parameters Used -->
+                                        ${mp.parameters && mp.parameters.length > 0 ? `
+                                            <div class="mb-3">
+                                                <div class="text-xs text-slate-500 mb-1">Parameters:</div>
+                                                <div class="flex flex-wrap gap-1">
+                                                    ${mp.parameters.slice(0, 5).map((param, i) => `
+                                                        <span class="parameter-badge text-xs px-2 py-1 bg-blue-500 bg-opacity-10 text-blue-400 rounded border border-blue-500 border-opacity-20" 
+                                                              style="animation-delay: ${i * 0.1}s">
+                                                            ${param.length > 20 ? param.substring(0, 20) + '...' : param}
+                                                        </span>
+                                                    `).join('')}
+                                                    ${mp.parameters.length > 5 ? `
+                                                        <span class="text-xs px-2 py-1 bg-slate-700 bg-opacity-30 text-slate-400 rounded">
+                                                            +${mp.parameters.length - 5} more
+                                                        </span>
+                                                    ` : ''}
+                                                </div>
+                                            </div>
+                                        ` : ''}
+
+                                        <!-- Steps -->
+                                        <div class="space-y-2">
+                                            ${mp.steps.map((step, stepIdx) => `
+                                                <div class="step-item flex items-start gap-2 text-sm text-slate-200 bg-slate-800 bg-opacity-30 p-2 rounded">
+                                                    <span class="text-purple-400 font-bold flex-shrink-0 mt-0.5">${stepIdx + 1}.</span>
+                                                    <span class="leading-relaxed">${step}</span>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Final Plan -->
+                    ${planData.final_plan && planData.steps.length > 0 ? `
+                        <div class="bg-gradient-to-br from-slate-900 to-purple-900 bg-opacity-50 rounded-lg p-4 border border-purple-500 border-opacity-30">
+                            <div class="flex items-center justify-between mb-3">
+                                <h5 class="text-sm font-semibold text-purple-400">
+                                    ${planData.status === 'complete' ? '📋 Final Plan' : '🔄 Current Plan'}
+                                </h5>
+                                <span class="text-xs text-slate-400">${planData.steps.length} steps</span>
+                            </div>
+                            <div class="space-y-2 max-h-64 overflow-y-auto">
+                                ${planData.steps.map((step, idx) => `
+                                    <div class="flex items-start gap-2 text-sm text-slate-100">
+                                        <span class="text-purple-400 font-bold flex-shrink-0 mt-0.5">${idx + 1}.</span>
+                                        <span class="leading-relaxed">${step}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Improvements -->
+                    ${planData.improvements && planData.improvements.length > 0 ? `
+                        <div class="mt-4">
+                            <h5 class="text-sm font-semibold text-yellow-400 mb-3">✨ Improvements (${planData.improvements.length})</h5>
+                            <div class="space-y-2 max-h-48 overflow-y-auto">
+                                ${planData.improvements.map((imp, idx) => `
+                                    <div class="bg-slate-900 bg-opacity-30 rounded-lg p-3 border border-yellow-500 border-opacity-20 slide-up">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-xs font-semibold text-yellow-400">${imp.by_agent.toUpperCase()}</span>
+                                            <span class="text-xs text-green-400 font-bold">Score: ${imp.score}</span>
+                                        </div>
+                                        ${imp.steps.slice(0, 3).map(step => `
+                                            <p class="text-xs text-slate-300 mb-1">• ${step.substring(0, 80)}${step.length > 80 ? '...' : ''}</p>
+                                        `).join('')}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function updateProcessingDisplay() {
+            updateProgressBars();
+            updateLivePlansDisplay();
+        }
+
+        function renderProcessingPhase() {
+            return `
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    <!-- Left: Progress & Analytics -->
+                    <div class="xl:col-span-1 space-y-6">
+                        <!-- Status Card -->
+                        <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-6 border border-slate-700">
+                            <div class="text-center mb-4">
+                                <div class="text-5xl mb-3 pulse-animate">🧠</div>
+                                <h2 class="text-2xl font-bold mb-1">Processing...</h2>
+                                <p class="text-slate-300 text-sm">Real-time AI Generation</p>
+                                ${state.currentPhase ? `
+                                    <div class="mt-3 px-4 py-2 bg-purple-500 bg-opacity-20 rounded-lg inline-block">
+                                        <span class="text-purple-400 font-semibold">Phase ${state.currentPhase}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+
+                            <!-- Progress Bars -->
+                            <div id="agentProgressContainer" class="space-y-2">
+                                <!-- Dynamically updated -->
+                            </div>
+                        </div>
+
+                        <!-- Activity Log -->
+                        <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-6 border border-slate-700">
+                            <h3 class="text-sm font-semibold text-slate-400 uppercase mb-3 flex items-center gap-2">
+                                <span class="w-2 h-2 bg-red-500 rounded-full pulse-animate"></span>
+                                Live Activity Log
+                            </h3>
+                            <div id="realtimeLog" class="h-96 overflow-y-auto space-y-1 bg-slate-900 bg-opacity-30 rounded-lg p-3 scroll-smooth">
+                                <!-- Log entries appear here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Live Plans (2 columns) -->
+                    <div class="xl:col-span-2">
+                        <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-6 border border-slate-700">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-xl font-bold text-purple-300 flex items-center gap-2">
+                                    <span class="text-2xl">📝</span>
+                                    Live Plans Generation
+                                </h3>
+                                <div class="text-xs text-slate-400">
+                                    ${Object.keys(state.liveAgentPlans).length} agents active
+                                </div>
+                            </div>
+                            <div id="livePlansContainer" class="overflow-y-auto max-h-[1000px] space-y-4 scroll-smooth">
+                                <!-- Live plans appear here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Auth & Main App Functions (keeping existing ones)
         async function handleLogin(e) {
             e.preventDefault();
             setState({ isLoading: true });
@@ -64,11 +694,10 @@
                         isLoading: false
                     });
                 } else {
-                    alert(data.message || 'Invalid username or password');
+                    alert(data.message || 'Invalid credentials');
                     setState({ isLoading: false });
                 }
             } catch (error) {
-                console.error('Login error:', error);
                 alert('Unable to connect to server');
                 setState({ isLoading: false });
             }
@@ -105,53 +734,8 @@
                     setState({ isLoading: false });
                 }
             } catch (error) {
-                console.error('Signup error:', error);
                 alert('Unable to connect to server');
                 setState({ isLoading: false });
-            }
-        }
-
-        async function startPlanning() {
-            setState({ isLoading: true, phase: 'processing' });
-
-            try {
-                // Create abort controller with 5 hour timeout
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 18000000); // 5 hours = 18000000ms
-
-                const response = await fetch('http://localhost:5000/api/plan', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        username: state.currentUser,
-                        aim: state.aim,
-                        steps: state.steps
-                    }),
-                    signal: controller.signal
-                });
-
-                clearTimeout(timeoutId);
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    setState({
-                        apiResponse: data,
-                        phase: 'results',
-                        isLoading: false
-                    });
-                } else {
-                    alert(data.message || 'Planning failed');
-                    setState({ phase: 'input', isLoading: false });
-                }
-            } catch (error) {
-                if (error.name === 'AbortError') {
-                    alert('Request timed out after 5 hours. Please try again.');
-                } else {
-                    console.error('Planning error:', error);
-                    alert('Planning failed: ' + error.message);
-                }
-                setState({ phase: 'input', isLoading: false });
             }
         }
 
@@ -165,7 +749,9 @@
                 phase: 'input',
                 aim: '',
                 steps: { step1: '', step2: '' },
-                apiResponse: null
+                apiResponse: null,
+                liveAgentPlans: {},
+                analyticsData: {}
             });
         }
 
@@ -174,10 +760,6 @@
             const nextStepNum = stepKeys.length + 1;
             state.steps['step' + nextStepNum] = '';
             render();
-        }
-
-        function updateStep(key, value) {
-            state.steps[key] = value;
         }
 
         function removeStep(key) {
@@ -219,11 +801,12 @@
                 phase: 'input',
                 aim: '',
                 steps: { step1: '', step2: '' },
-                apiResponse: null
+                apiResponse: null,
+                liveAgentPlans: {},
+                analyticsData: {}
             });
         }
 
-        // Main Render Function
         function render() {
             const app = document.getElementById('app');
             
@@ -243,7 +826,7 @@
                         <div class="text-center mb-8">
                             <div class="w-16 h-16 bg-purple-500 rounded-full mx-auto mb-4 flex items-center justify-center text-4xl">🧠</div>
                             <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-2">AI Planner</h1>
-                            <p class="text-slate-400">Collaborative AI Planning System</p>
+                            <p class="text-slate-400">Real-time Planning System</p>
                         </div>
 
                         <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border border-slate-700 shadow-2xl">
@@ -293,7 +876,7 @@
                                 <div class="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-2xl">🧠</div>
                                 <div>
                                     <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">AI Collaborative Planner</h1>
-                                    <p class="text-slate-400 text-sm">12 AI Agents • Unlimited Improvements</p>
+                                    <p class="text-slate-400 text-sm">Enhanced Real-time Generation</p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-4">
@@ -361,17 +944,6 @@
             `;
         }
 
-        function renderProcessingPhase() {
-            return `
-                <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border border-slate-700 shadow-2xl text-center">
-                    <div class="text-6xl mb-6">🧠</div>
-                    <h2 class="text-3xl font-bold mb-4">AI Agents Working...</h2>
-                    <p class="text-slate-300 text-lg">12 AI agents are analyzing and improving your plan</p>
-                    <p class="text-slate-400 text-sm mt-2">This may take 2-5 minutes...</p>
-                </div>
-            `;
-        }
-
         function renderResultsPhase() {
             const winner = getWinner();
             const agents = Object.keys(state.apiResponse || {}).filter(key => key.startsWith('agent'));
@@ -382,8 +954,7 @@
                         <div class="bg-gradient-to-r from-yellow-500 from-opacity-20 to-orange-500 to-opacity-20 backdrop-blur-lg rounded-2xl p-8 border border-yellow-500 border-opacity-30 shadow-2xl">
                             <div class="text-center mb-6">
                                 <div class="text-6xl mb-4">🏆</div>
-                                <h2 class="text-4xl font-bold mb-2">Winner: AI Agent ${winner.agentKey.replace('agent', '')}</h2>
-                                <p class="text-2xl text-slate-300 mb-1">${winner.agent_name ? winner.agent_name.toUpperCase() : ''}</p>
+                                <h2 class="text-4xl font-bold mb-2">Winner: ${winner.agent_name ? winner.agent_name.toUpperCase() : 'AI Agent ' + winner.agentKey.replace('agent', '')}</h2>
                                 <p class="text-3xl text-yellow-400 font-bold mb-4">Average Score: ${winner.avgScore.toFixed(1)}</p>
                                 <p class="text-slate-400">Original: ${winner.original_score} → Final: ${winner.final_score} (${winner.total_improvements} improvements)</p>
                             </div>
@@ -414,8 +985,8 @@
                                 <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-xl p-6 border ${isWinner ? 'border-yellow-500 ring-2 ring-yellow-500 ring-opacity-50' : 'border-slate-700'}">
                                     <div class="flex items-center justify-between mb-4">
                                         <div>
-                                            <h3 class="font-semibold text-lg">AI Agent ${agentKey.replace('agent', '')}</h3>
-                                            <p class="text-sm text-slate-400">${agentData.agent_name ? agentData.agent_name.toUpperCase() : ''}</p>
+                                            <h3 class="font-semibold text-lg">${agentData.agent_name ? agentData.agent_name.toUpperCase() : 'Agent ' + agentKey.replace('agent', '')}</h3>
+                                            <p class="text-sm text-slate-400">AI Agent ${agentKey.replace('agent', '')}</p>
                                         </div>
                                         ${isWinner ? '<span class="text-2xl">🏆</span>' : ''}
                                     </div>
@@ -444,10 +1015,10 @@
                                     </div>
 
                                     <div class="space-y-2">
-                                        <h4 class="text-xs font-semibold text-slate-500 uppercase">Score Progress (${agentData.total_improvements} improvements):</h4>
-                                        <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                                        <h4 class="text-xs font-semibold text-slate-500 uppercase">Score Progress:</h4>
+                                        <div class="flex flex-wrap gap-2">
                                             ${(agentData.all_improvement_scores || []).map((score, idx) => `
-                                                <div class="px-3 py-1 bg-slate-900 bg-opacity-50 rounded-lg text-sm ${idx === 0 ? 'border border-blue-400' : ''}">
+                                                <div class="px-3 py-1 bg-slate-900 bg-opacity-50 rounded-lg text-sm">
                                                     <span class="text-slate-400">${idx === 0 ? 'Orig' : `R${idx}`}:</span>
                                                     <span class="ml-2 font-bold text-purple-400">${score}</span>
                                                 </div>
@@ -525,11 +1096,7 @@
             }
         }
 
-        // Initial Render
-        document.addEventListener('DOMContentLoaded', function() {
-            render();
-        });
-        
+        document.addEventListener('DOMContentLoaded', render);
         render();
     </script>
 </body>
