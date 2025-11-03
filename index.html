@@ -115,6 +115,10 @@
             setState({ isLoading: true, phase: 'processing' });
 
             try {
+                // Create abort controller with 5 hour timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 18000000); // 5 hours = 18000000ms
+
                 const response = await fetch('http://localhost:5000/api/plan', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -122,8 +126,11 @@
                         username: state.currentUser,
                         aim: state.aim,
                         steps: state.steps
-                    })
+                    }),
+                    signal: controller.signal
                 });
+
+                clearTimeout(timeoutId);
 
                 const data = await response.json();
 
@@ -138,8 +145,12 @@
                     setState({ phase: 'input', isLoading: false });
                 }
             } catch (error) {
-                console.error('Planning error:', error);
-                alert('Planning failed');
+                if (error.name === 'AbortError') {
+                    alert('Request timed out after 5 hours. Please try again.');
+                } else {
+                    console.error('Planning error:', error);
+                    alert('Planning failed: ' + error.message);
+                }
                 setState({ phase: 'input', isLoading: false });
             }
         }
