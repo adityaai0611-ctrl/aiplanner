@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Planner - Enhanced Real-time</title>
+    <title>AI Planner - Feature Detection</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @keyframes slideUp {
@@ -27,6 +27,31 @@
             50% { opacity: 0.5; }
         }
 
+        @keyframes popIn {
+            0% {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes countUp {
+            0% {
+                transform: translateY(10px) scale(1.5);
+                opacity: 0;
+            }
+            100% {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
+
         .slide-up {
             animation: slideUp 0.5s ease-out;
         }
@@ -37,6 +62,18 @@
 
         .pulse-animate {
             animation: pulse 2s infinite;
+        }
+
+        .pop-in {
+            animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .count-up {
+            animation: countUp 0.4s ease-out;
+        }
+
+        .feature-badge {
+            animation: popIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
 
         .scroll-smooth {
@@ -57,19 +94,11 @@
             animation-fill-mode: both;
         }
 
-        .step-item:nth-child(1) { animation-delay: 0.1s; }
-        .step-item:nth-child(2) { animation-delay: 0.2s; }
-        .step-item:nth-child(3) { animation-delay: 0.3s; }
-        .step-item:nth-child(4) { animation-delay: 0.4s; }
-        .step-item:nth-child(5) { animation-delay: 0.5s; }
-
-        .parameter-badge {
-            animation: fadeIn 0.3s ease-in;
-            animation-fill-mode: both;
-        }
-
-        .analytics-card {
-            backdrop-filter: blur(10px);
+        .feature-panel {
+            position: sticky;
+            top: 20px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
         }
     </style>
 </head>
@@ -95,7 +124,11 @@
             agentProgress: {},
             liveAgentPlans: {},
             analyticsData: {},
-            eventSource: null
+            eventSource: null,
+            // 🆕 Feature Detection
+            discoveredFeatures: [],
+            featureCount: 0,
+            newFeatureAnimation: null
         };
 
         function setState(updates) {
@@ -118,7 +151,9 @@
                 realtimeEvents: [],
                 agentProgress: {},
                 liveAgentPlans: {},
-                analyticsData: {}
+                analyticsData: {},
+                discoveredFeatures: [],
+                featureCount: 0
             });
 
             try {
@@ -200,6 +235,14 @@
                 case 'process_start':
                     addLogMessage(`🚀 Starting planning for ${event.data.agents_count} AI agents`, 'info');
                     state.analyticsData.processStartTime = timestamp;
+                    break;
+
+                case 'feature_detection_start':
+                    addLogMessage('🔍 Starting feature detection...', 'feature');
+                    break;
+
+                case 'features_detected':
+                    handleFeatureDetection(event.data);
                     break;
 
                 case 'phase_start':
@@ -368,6 +411,63 @@
             }
         }
 
+        function handleFeatureDetection(data) {
+            const newCount = data.added_count || 0;
+            const source = data.source || 'unknown';
+            
+            if (newCount > 0) {
+                // Update feature list
+                state.discoveredFeatures = data.all_features || [];
+                state.featureCount = data.total_features || 0;
+                
+                // Add log message
+                addLogMessage(`✨ +${newCount} new features detected from ${source}`, 'feature');
+                
+                // Animate counter
+                animateFeatureCounter(newCount);
+                
+                // Update display
+                updateFeaturePanel();
+            }
+        }
+
+        function animateFeatureCounter(newCount) {
+            const counterEl = document.getElementById('featureCounter');
+            const addedEl = document.getElementById('featureAdded');
+            
+            if (counterEl && addedEl) {
+                // Show +N animation
+                addedEl.textContent = `+${newCount}`;
+                addedEl.classList.remove('count-up');
+                void addedEl.offsetWidth; // Trigger reflow
+                addedEl.classList.add('count-up');
+                addedEl.style.opacity = '1';
+                
+                // Update total count
+                counterEl.textContent = state.featureCount;
+                
+                // Hide +N after animation
+                setTimeout(() => {
+                    addedEl.style.opacity = '0';
+                }, 2000);
+            }
+        }
+
+        function updateFeaturePanel() {
+            const featureList = document.getElementById('featureList');
+            if (!featureList) return;
+            
+            featureList.innerHTML = state.discoveredFeatures.map((feature, index) => `
+                <div class="feature-badge bg-gradient-to-r from-purple-500 to-pink-500 bg-opacity-10 border border-purple-500 border-opacity-30 rounded-lg px-4 py-3 mb-2"
+                     style="animation-delay: ${index * 0.05}s">
+                    <div class="flex items-center gap-2">
+                        <span class="text-purple-400 font-bold text-lg">•</span>
+                        <span class="text-slate-100 font-medium">${feature}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
         function scrollToLatestMiniPlan(agent) {
             setTimeout(() => {
                 const container = document.getElementById(`agent-${agent}-plans`);
@@ -391,7 +491,8 @@
                     'error': 'text-red-400',
                     'info': 'text-blue-400',
                     'agent': 'text-purple-400',
-                    'progress': 'text-yellow-400'
+                    'progress': 'text-yellow-400',
+                    'feature': 'text-pink-400'
                 };
 
                 const logEntry = document.createElement('div');
@@ -515,7 +616,6 @@
                             <div class="space-y-3 max-h-96 overflow-y-auto scroll-smooth pr-2">
                                 ${planData.mini_plans.map((mp, idx) => `
                                     <div class="mini-plan-card bg-slate-900 bg-opacity-40 rounded-lg p-4 border border-slate-700">
-                                        <!-- Mini Plan Header -->
                                         <div class="flex items-center justify-between mb-3">
                                             <div class="flex items-center gap-2">
                                                 <span class="w-6 h-6 rounded-full bg-purple-500 bg-opacity-20 flex items-center justify-center text-xs font-bold text-purple-400">
@@ -529,27 +629,6 @@
                                             </div>
                                         </div>
 
-                                        <!-- Parameters Used -->
-                                        ${mp.parameters && mp.parameters.length > 0 ? `
-                                            <div class="mb-3">
-                                                <div class="text-xs text-slate-500 mb-1">Parameters:</div>
-                                                <div class="flex flex-wrap gap-1">
-                                                    ${mp.parameters.slice(0, 5).map((param, i) => `
-                                                        <span class="parameter-badge text-xs px-2 py-1 bg-blue-500 bg-opacity-10 text-blue-400 rounded border border-blue-500 border-opacity-20" 
-                                                              style="animation-delay: ${i * 0.1}s">
-                                                            ${param.length > 20 ? param.substring(0, 20) + '...' : param}
-                                                        </span>
-                                                    `).join('')}
-                                                    ${mp.parameters.length > 5 ? `
-                                                        <span class="text-xs px-2 py-1 bg-slate-700 bg-opacity-30 text-slate-400 rounded">
-                                                            +${mp.parameters.length - 5} more
-                                                        </span>
-                                                    ` : ''}
-                                                </div>
-                                            </div>
-                                        ` : ''}
-
-                                        <!-- Steps -->
                                         <div class="space-y-2">
                                             ${mp.steps.map((step, stepIdx) => `
                                                 <div class="step-item flex items-start gap-2 text-sm text-slate-200 bg-slate-800 bg-opacity-30 p-2 rounded">
@@ -583,26 +662,6 @@
                             </div>
                         </div>
                     ` : ''}
-
-                    <!-- Improvements -->
-                    ${planData.improvements && planData.improvements.length > 0 ? `
-                        <div class="mt-4">
-                            <h5 class="text-sm font-semibold text-yellow-400 mb-3">✨ Improvements (${planData.improvements.length})</h5>
-                            <div class="space-y-2 max-h-48 overflow-y-auto">
-                                ${planData.improvements.map((imp, idx) => `
-                                    <div class="bg-slate-900 bg-opacity-30 rounded-lg p-3 border border-yellow-500 border-opacity-20 slide-up">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <span class="text-xs font-semibold text-yellow-400">${imp.by_agent.toUpperCase()}</span>
-                                            <span class="text-xs text-green-400 font-bold">Score: ${imp.score}</span>
-                                        </div>
-                                        ${imp.steps.slice(0, 3).map(step => `
-                                            <p class="text-xs text-slate-300 mb-1">• ${step.substring(0, 80)}${step.length > 80 ? '...' : ''}</p>
-                                        `).join('')}
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
                 </div>
             `;
         }
@@ -610,11 +669,12 @@
         function updateProcessingDisplay() {
             updateProgressBars();
             updateLivePlansDisplay();
+            updateFeaturePanel();
         }
 
         function renderProcessingPhase() {
             return `
-                <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
                     <!-- Left: Progress & Analytics -->
                     <div class="xl:col-span-1 space-y-6">
                         <!-- Status Card -->
@@ -636,6 +696,36 @@
                             </div>
                         </div>
 
+                        <!-- 🆕 FEATURE PANEL -->
+                        <div class="feature-panel bg-gradient-to-br from-pink-900 via-purple-900 to-slate-900 bg-opacity-50 backdrop-blur-lg rounded-2xl p-6 border border-pink-500 border-opacity-30">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-3xl">✨</span>
+                                    <div>
+                                        <h3 class="text-lg font-bold text-pink-300">Features Detected</h3>
+                                        <p class="text-xs text-slate-400">Real-time discovery</p>
+                                    </div>
+                                </div>
+                                <div class="relative">
+                                    <div class="text-4xl font-bold text-pink-400" id="featureCounter">${state.featureCount}</div>
+                                    <div class="absolute -top-2 -right-2 text-green-400 font-bold text-lg opacity-0 transition-opacity" 
+                                         id="featureAdded" style="transition: opacity 0.3s;">+0</div>
+                                </div>
+                            </div>
+
+                            <div id="featureList" class="max-h-96 overflow-y-auto scroll-smooth space-y-2">
+                                ${state.discoveredFeatures.map((feature, index) => `
+                                    <div class="feature-badge bg-gradient-to-r from-purple-500 to-pink-500 bg-opacity-10 border border-purple-500 border-opacity-30 rounded-lg px-4 py-3"
+                                         style="animation-delay: ${index * 0.05}s">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-purple-400 font-bold text-lg">•</span>
+                                            <span class="text-slate-100 font-medium">${feature}</span>
+                                        </div>
+                                    </div>
+                                `).join('') || '<p class="text-slate-400 text-sm text-center py-4">Waiting for features...</p>'}
+                            </div>
+                        </div>
+
                         <!-- Activity Log -->
                         <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-6 border border-slate-700">
                             <h3 class="text-sm font-semibold text-slate-400 uppercase mb-3 flex items-center gap-2">
@@ -648,8 +738,8 @@
                         </div>
                     </div>
 
-                    <!-- Right: Live Plans (2 columns) -->
-                    <div class="xl:col-span-2">
+                    <!-- Right: Live Plans (3 columns) -->
+                    <div class="xl:col-span-3">
                         <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-6 border border-slate-700">
                             <div class="flex items-center justify-between mb-6">
                                 <h3 class="text-xl font-bold text-purple-300 flex items-center gap-2">
@@ -669,7 +759,7 @@
             `;
         }
 
-        // Auth & Main App Functions (keeping existing ones)
+        // Auth & Main App Functions
         async function handleLogin(e) {
             e.preventDefault();
             setState({ isLoading: true });
@@ -751,7 +841,9 @@
                 steps: { step1: '', step2: '' },
                 apiResponse: null,
                 liveAgentPlans: {},
-                analyticsData: {}
+                analyticsData: {},
+                discoveredFeatures: [],
+                featureCount: 0
             });
         }
 
@@ -803,7 +895,9 @@
                 steps: { step1: '', step2: '' },
                 apiResponse: null,
                 liveAgentPlans: {},
-                analyticsData: {}
+                analyticsData: {},
+                discoveredFeatures: [],
+                featureCount: 0
             });
         }
 
@@ -826,7 +920,7 @@
                         <div class="text-center mb-8">
                             <div class="w-16 h-16 bg-purple-500 rounded-full mx-auto mb-4 flex items-center justify-center text-4xl">🧠</div>
                             <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-2">AI Planner</h1>
-                            <p class="text-slate-400">Real-time Planning System</p>
+                            <p class="text-slate-400">Feature Detection System</p>
                         </div>
 
                         <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border border-slate-700 shadow-2xl">
@@ -876,7 +970,7 @@
                                 <div class="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-2xl">🧠</div>
                                 <div>
                                     <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">AI Collaborative Planner</h1>
-                                    <p class="text-slate-400 text-sm">Enhanced Real-time Generation</p>
+                                    <p class="text-slate-400 text-sm">Feature Detection + Real-time Generation</p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-4">
@@ -971,6 +1065,29 @@
                                         </div>
                                     `).join('')}
                                 </div>
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- 🆕 FEATURES DISCOVERED SECTION -->
+                    ${state.discoveredFeatures.length > 0 ? `
+                        <div class="bg-gradient-to-br from-pink-900 via-purple-900 to-slate-900 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border border-pink-500 border-opacity-30">
+                            <div class="flex items-center gap-3 mb-6">
+                                <span class="text-5xl">✨</span>
+                                <div>
+                                    <h2 class="text-3xl font-bold text-pink-300">Features Discovered</h2>
+                                    <p class="text-slate-400">Total: ${state.featureCount} features identified</p>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                ${state.discoveredFeatures.map((feature, index) => `
+                                    <div class="bg-gradient-to-r from-purple-500 to-pink-500 bg-opacity-10 border border-purple-500 border-opacity-30 rounded-lg px-4 py-3">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-purple-400 font-bold text-lg">•</span>
+                                            <span class="text-slate-100 font-medium">${feature}</span>
+                                        </div>
+                                    </div>
+                                `).join('')}
                             </div>
                         </div>
                     ` : ''}
