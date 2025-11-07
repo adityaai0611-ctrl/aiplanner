@@ -119,7 +119,7 @@
     <div id="app" class="min-h-screen"></div>
 
     <script>
-        // UPDATED STATE WITH FRAUD DETECTION
+        // UPDATED STATE WITH FRAUD DETECTION AND TOOL MANAGEMENT
         let state = {
             isAuthenticated: false,
             showLogin: true,
@@ -147,7 +147,12 @@
             fraudDetections: [],
             fraudAlertCount: 0,
             techSuggestions: [],
-            safetyNodes: []
+            safetyNodes: [],
+            // NEW: Add tool management to state
+            toolName: '',
+            isToolProcessing: false,
+            activeTool: null,  // Stores {name, toolPath, paramPath}
+            showToolInput: false
         };
 
         function setState(updates) {
@@ -241,6 +246,27 @@
         function renderConfirmationScreen() {
             return `
                 <div class="space-y-6 max-w-5xl mx-auto">
+                    ${state.activeTool ? `
+                        <div class="bg-gradient-to-r from-blue-900 to-purple-900 bg-opacity-50 backdrop-blur-lg rounded-xl p-4 border border-blue-500 border-opacity-30">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-2xl">🔧</span>
+                                    <div>
+                                        <div class="text-sm text-slate-400">Active Tool</div>
+                                        <div class="text-blue-300 font-bold text-lg">${state.activeTool.name}</div>
+                                    </div>
+                                </div>
+                                <button 
+                                    onclick="removeTool()"
+                                    class="w-8 h-8 bg-red-500 bg-opacity-20 hover:bg-opacity-40 rounded-lg flex items-center justify-center text-red-400 hover:text-red-300 transition-all"
+                                    title="Remove tool"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
                     <div class="text-center">
                         <div class="w-20 h-20 bg-gradient-to-br from-green-500 to-blue-500 rounded-full mx-auto mb-4 flex items-center justify-center text-5xl animate-bounce">
                             ✅
@@ -1354,7 +1380,11 @@
                 fraudDetections: [],
                 fraudAlertCount: 0,
                 techSuggestions: [],
-                safetyNodes: []
+                safetyNodes: [],
+                toolName: '',
+                isToolProcessing: false,
+                activeTool: null,
+                showToolInput: false
             });
         }
 
@@ -1414,7 +1444,11 @@
                 fraudDetections: [],
                 fraudAlertCount: 0,
                 techSuggestions: [],
-                safetyNodes: []
+                safetyNodes: [],
+                toolName: '',
+                isToolProcessing: false,
+                activeTool: null,
+                showToolInput: false
             });
         }
 
@@ -1517,6 +1551,73 @@
             
             return `
                 <div class="space-y-6">
+                    ${state.activeTool ? `
+                        <div class="bg-gradient-to-r from-blue-900 to-purple-900 bg-opacity-50 backdrop-blur-lg rounded-xl p-4 border border-blue-500 border-opacity-30">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-2xl">🔧</span>
+                                    <div>
+                                        <div class="text-sm text-slate-400">Active Tool</div>
+                                        <div class="text-blue-300 font-bold text-lg">${state.activeTool.name}</div>
+                                    </div>
+                                </div>
+                                <button 
+                                    onclick="removeTool()"
+                                    class="w-8 h-8 bg-red-500 bg-opacity-20 hover:bg-opacity-40 rounded-lg flex items-center justify-center text-red-400 hover:text-red-300 transition-all"
+                                    title="Remove tool and clear data"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="bg-gradient-to-br from-purple-900 via-blue-900 to-slate-900 bg-opacity-50 backdrop-blur-lg rounded-2xl p-6 border-2 border-purple-500 border-opacity-30">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <span class="text-3xl">🔧</span>
+                                <div>
+                                    <h2 class="text-xl font-bold text-purple-300">Software Tool Integration</h2>
+                                    <p class="text-slate-400 text-sm">Add a tool to enhance planning with specific parameters</p>
+                                </div>
+                            </div>
+                            <button 
+                                onclick="toggleToolInput()"
+                                class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-semibold transition-all"
+                            >
+                                ${state.showToolInput ? 'Hide' : 'Add Tool'}
+                            </button>
+                        </div>
+                        
+                        ${state.showToolInput ? `
+                            <div class="mt-4 space-y-3">
+                                <input 
+                                    type="text" 
+                                    id="toolNameInput" 
+                                    value="${state.toolName}"
+                                    placeholder="Enter tool name (e.g., Adobe Photoshop, Figma)" 
+                                    class="w-full px-4 py-3 bg-slate-900 bg-opacity-50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    ${state.isToolProcessing ? 'disabled' : ''}
+                                />
+                                <button 
+                                    onclick="processTool()"
+                                    ${state.isToolProcessing || !state.toolName.trim() ? 'disabled' : ''}
+                                    class="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed rounded-xl font-semibold transition-all"
+                                >
+                                    ${state.isToolProcessing ? '⏳ Processing Tool...' : '✨ Process & Add Tool'}
+                                </button>
+                                ${state.isToolProcessing ? `
+                                    <div class="bg-yellow-500 bg-opacity-10 border border-yellow-500 border-opacity-30 rounded-lg p-3">
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-4 h-4 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+                                            <p class="text-yellow-300 text-sm">Extracting tool features and parameters... This may take a few minutes.</p>
+                                        </div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+
                     <div class="bg-gradient-to-br from-blue-900 via-purple-900 to-slate-900 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border-2 border-blue-500 border-opacity-30 shadow-2xl">
                         <div class="flex items-center gap-3 mb-4">
                             <span class="text-4xl">🧠</span>
@@ -1744,6 +1845,105 @@
             `;
         }
 
+        function toggleToolInput() {
+            setState({ showToolInput: !state.showToolInput });
+        }
+
+        async function processTool() {
+            const toolName = document.getElementById('toolNameInput')?.value.trim();
+            
+            if (!toolName) {
+                alert('Please enter a tool name');
+                return;
+            }
+            
+            setState({ isToolProcessing: true });
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/process-tool', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        tool_name: toolName 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    setState({
+                        activeTool: {
+                            name: toolName,
+                            toolPath: data.tool_path,
+                            paramPath: data.param_path
+                        },
+                        toolName: '',
+                        showToolInput: false,
+                        isToolProcessing: false
+                    });
+                    
+                    // Save to cookies
+                    document.cookie = `activeTool=${JSON.stringify(state.activeTool)}; path=/; max-age=86400`;
+                    
+                    alert(`✅ Tool "${toolName}" processed successfully!\n${data.tools_found} tools and ${data.parameters_found} parameters extracted.`);
+                } else {
+                    alert('❌ ' + (data.message || 'Failed to process tool'));
+                    setState({ isToolProcessing: false });
+                }
+                
+            } catch (error) {
+                console.error('Tool processing error:', error);
+                alert('❌ Unable to connect to server');
+                setState({ isToolProcessing: false });
+            }
+        }
+
+        async function removeTool() {
+            if (!confirm('Remove this tool? This will clear all extracted data.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/remove-tool', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        tool_path: state.activeTool.toolPath,
+                        param_path: state.activeTool.paramPath
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    setState({ activeTool: null });
+                    document.cookie = 'activeTool=; path=/; max-age=0';
+                    alert('✅ Tool removed and data cleared');
+                } else {
+                    alert('⚠️ ' + (data.message || 'Failed to remove tool'));
+                }
+                
+            } catch (error) {
+                console.error('Remove tool error:', error);
+                alert('❌ Unable to remove tool');
+            }
+        }
+
+        // Load active tool from cookies on page load
+        function loadToolFromCookies() {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'activeTool' && value) {
+                    try {
+                        state.activeTool = JSON.parse(decodeURIComponent(value));
+                    } catch (e) {
+                        console.error('Error loading tool from cookies:', e);
+                    }
+                }
+            }
+        }
+
         function attachEventListeners() {
             const authForm = document.getElementById('authForm');
             if (authForm) {
@@ -1787,6 +1987,13 @@
                     updateButtonState();
                 };
             });
+            
+            const toolInput = document.getElementById('toolNameInput');
+            if (toolInput) {
+                toolInput.oninput = (e) => {
+                    state.toolName = e.target.value;
+                };
+            }
         }
 
         function updateButtonState() {
@@ -1803,6 +2010,8 @@
             }
         }
 
+        // Load tool on page load
+        loadToolFromCookies();
         document.addEventListener('DOMContentLoaded', render);
         render();
     </script>
