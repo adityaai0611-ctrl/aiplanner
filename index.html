@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Planner - Feature Detection</title>
+    <title>AI Planner - Feature Detection + Fraud Detection</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* ... KEEP ALL EXISTING STYLES ... */
         @keyframes slideUp {
             from {
                 transform: translateY(20px);
@@ -98,12 +99,27 @@
             position: sticky;
             top: 20px;
         }
+        
+        /* NEW: Fraud alert animation */
+        @keyframes alertPulse {
+            0%, 100% { 
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+            50% { 
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+        }
+        
+        .fraud-alert {
+            animation: alertPulse 2s infinite;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen">
     <div id="app" class="min-h-screen"></div>
 
     <script>
+        // UPDATED STATE WITH FRAUD DETECTION
         let state = {
             isAuthenticated: false,
             showLogin: true,
@@ -126,7 +142,12 @@
             featureCount: 0,
             newFeatureAnimation: null,
             naturalLanguageInput: '',
-            showConfirmation: false
+            showConfirmation: false,
+            // NEW: Add fraud and tech tracking
+            fraudDetections: [],
+            fraudAlertCount: 0,
+            techSuggestions: [],
+            safetyNodes: []
         };
 
         function setState(updates) {
@@ -326,7 +347,11 @@
                 liveAgentPlans: {},
                 analyticsData: {},
                 discoveredFeatures: [],
-                featureCount: 0
+                featureCount: 0,
+                fraudDetections: [],
+                fraudAlertCount: 0,
+                techSuggestions: [],
+                safetyNodes: []
             });
 
             try {
@@ -394,6 +419,7 @@
             return steps;
         }
 
+        // UPDATED handleRealtimeEvent WITH NEW CASES
         function handleRealtimeEvent(event) {
             console.log('Real-time event:', event);
             state.realtimeEvents.push(event);
@@ -568,6 +594,19 @@
                     updateLivePlansDisplay();
                     break;
 
+                // NEW CASES FOR FRAUD DETECTION AND TECH INTEGRATION
+                case 'fraud_detection':
+                    handleFraudDetection(event.data);
+                    break;
+
+                case 'node_generated':
+                    handleNodeGeneration(event.data);
+                    break;
+
+                case 'tech_integration':
+                    handleTechIntegration(event.data);
+                    break;
+
                 case 'process_complete':
                     addLogMessage(`🎊 Planning complete! ${event.data.total_agents} agents finished`, 'success');
                     state.analyticsData.processEndTime = timestamp;
@@ -583,6 +622,217 @@
                     setState({ phase: 'input', isLoading: false });
                     break;
             }
+        }
+
+        // NEW FRAUD DETECTION FUNCTIONS
+        function handleFraudDetection(data) {
+            const result = data.result;
+            const agent = data.agent;
+            const group = data.group;
+            
+            state.fraudDetections.push({
+                agent: agent,
+                group: group,
+                ...result,
+                timestamp: new Date().toISOString()
+            });
+            
+            if (result.suspicion_score > 0.6) {
+                state.fraudAlertCount++;
+                addLogMessage(`⚠️ FRAUD ALERT - ${agent} group ${group}: ${result.risk_type} (${result.suspicion_score.toFixed(2)})`, 'error');
+            } else {
+                addLogMessage(`✅ Fraud Check - ${agent} group ${group}: Safe`, 'success');
+            }
+            
+            updateFraudPanel();
+        }
+
+        function handleNodeGeneration(data) {
+            const node = data.node;
+            const agent = data.agent;
+            const group = data.group;
+            
+            if (!node.error && !node.skipped) {
+                state.safetyNodes.push({
+                    agent: agent,
+                    group: group,
+                    ...node,
+                    timestamp: new Date().toISOString()
+                });
+                
+                addLogMessage(`🛡️ Safety Node Generated: ${node.node_name}`, 'info');
+                updateSafetyNodesPanel();
+            }
+        }
+
+        function handleTechIntegration(data) {
+            const suggestions = data.suggestions;
+            const agent = data.agent;
+            const group = data.group;
+            
+            if (suggestions && !suggestions.error) {
+                state.techSuggestions.push({
+                    agent: agent,
+                    group: group,
+                    ...suggestions,
+                    timestamp: new Date().toISOString()
+                });
+                
+                const count = suggestions.suggestions?.length || 0;
+                addLogMessage(`🔧 Tech Integration - ${agent} group ${group}: ${count} suggestions`, 'info');
+                updateTechPanel();
+            }
+        }
+
+        function updateFraudPanel() {
+            const fraudList = document.getElementById('fraudDetectionList');
+            if (!fraudList) return;
+            
+            const recentFrauds = state.fraudDetections.slice(-10).reverse();
+            
+            if (recentFrauds.length === 0) {
+                fraudList.innerHTML = `
+                    <div class="text-center py-8">
+                        <div class="text-4xl mb-2">🛡️</div>
+                        <p class="text-slate-400">No fraud checks yet</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            fraudList.innerHTML = recentFrauds.map((fraud, idx) => {
+                const isAlert = fraud.suspicion_score > 0.6;
+                const borderColor = isAlert ? 'border-red-500' : 'border-green-500';
+                const bgColor = isAlert ? 'from-red-900' : 'from-green-900';
+                const icon = isAlert ? '⚠️' : '✅';
+                
+                return `
+                    <div class="bg-gradient-to-r ${bgColor} to-slate-900 bg-opacity-40 border ${borderColor} border-opacity-30 rounded-lg p-3 ${isAlert ? 'fraud-alert' : ''}" 
+                         style="animation-delay: ${idx * 0.05}s">
+                        <div class="flex items-start gap-3">
+                            <div class="text-2xl">${icon}</div>
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="font-bold text-sm">${fraud.agent.toUpperCase()} - Group ${fraud.group}</span>
+                                    <span class="px-2 py-0.5 bg-slate-900 bg-opacity-50 rounded text-xs ${isAlert ? 'text-red-400' : 'text-green-400'}">
+                                        ${(fraud.suspicion_score * 100).toFixed(0)}%
+                                    </span>
+                                </div>
+                                <div class="text-xs text-slate-300 mb-1">
+                                    <span class="font-semibold">Type:</span> ${fraud.risk_type}
+                                </div>
+                                <div class="text-xs text-slate-300 mb-1">
+                                    <span class="font-semibold">Action:</span> ${fraud.suggested_action}
+                                </div>
+                                ${fraud.reason_list && fraud.reason_list.length > 0 ? `
+                                    <div class="text-xs text-slate-400 mt-2">
+                                        ${fraud.reason_list.slice(0, 2).map(reason => `• ${reason}`).join('<br>')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Update counter
+            const fraudCounter = document.getElementById('fraudAlertCounter');
+            if (fraudCounter) {
+                fraudCounter.textContent = state.fraudAlertCount;
+            }
+        }
+
+        function updateSafetyNodesPanel() {
+            const nodesList = document.getElementById('safetyNodesList');
+            if (!nodesList) return;
+            
+            if (state.safetyNodes.length === 0) {
+                nodesList.innerHTML = `
+                    <div class="text-center py-8">
+                        <div class="text-4xl mb-2">🔒</div>
+                        <p class="text-slate-400">No safety nodes generated yet</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            nodesList.innerHTML = state.safetyNodes.map((node, idx) => `
+                <div class="bg-gradient-to-r from-blue-900 to-slate-900 bg-opacity-40 border border-blue-500 border-opacity-30 rounded-lg p-4 slide-up"
+                     style="animation-delay: ${idx * 0.05}s">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-blue-500 bg-opacity-20 rounded-lg flex items-center justify-center text-xl">🛡️</div>
+                        <div class="flex-1">
+                            <div class="font-bold text-blue-300 mb-1">${node.node_name}</div>
+                            <div class="text-xs text-slate-400 mb-2">${node.agent.toUpperCase()} - Group ${node.group}</div>
+                            <div class="text-sm text-slate-300 mb-2">${node.node_purpose}</div>
+                            ${node.integration_steps ? `
+                                <div class="text-xs text-slate-400">
+                                    <span class="font-semibold">Integration:</span> After ${node.integration_steps.attach_after_step}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateTechPanel() {
+            const techList = document.getElementById('techSuggestionsList');
+            if (!techList) return;
+            
+            if (state.techSuggestions.length === 0) {
+                techList.innerHTML = `
+                    <div class="text-center py-8">
+                        <div class="text-4xl mb-2">🔧</div>
+                        <p class="text-slate-400">No tech suggestions yet</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const allSuggestions = state.techSuggestions.flatMap(tech => 
+                (tech.suggestions || []).map(s => ({
+                    ...s,
+                    agent: tech.agent,
+                    group: tech.group
+                }))
+            );
+            
+            techList.innerHTML = allSuggestions.slice(-15).map((suggestion, idx) => {
+                const levelColor = {
+                    'Auto': 'green',
+                    'Semi': 'yellow',
+                    'Manual': 'red'
+                }[suggestion.automation_level] || 'blue';
+                
+                return `
+                    <div class="bg-gradient-to-r from-purple-900 to-slate-900 bg-opacity-40 border border-purple-500 border-opacity-30 rounded-lg p-3 slide-up"
+                         style="animation-delay: ${idx * 0.03}s">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 bg-purple-500 bg-opacity-20 rounded-lg flex items-center justify-center text-purple-400 font-bold flex-shrink-0">
+                                ${suggestion.step_number}
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-xs text-slate-500 mb-1">${suggestion.agent?.toUpperCase()} - Group ${suggestion.group}</div>
+                                <div class="text-sm text-slate-300 mb-2">${suggestion.original_step}</div>
+                                <div class="flex flex-wrap gap-1 mb-2">
+                                    ${(suggestion.tools || []).map(tool => `
+                                        <span class="px-2 py-0.5 bg-purple-500 bg-opacity-20 rounded text-xs text-purple-300 border border-purple-500 border-opacity-30">
+                                            ${tool}
+                                        </span>
+                                    `).join('')}
+                                </div>
+                                <div class="text-xs text-slate-400 mb-1">${suggestion.use_case}</div>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-0.5 bg-${levelColor}-500 bg-opacity-20 rounded text-xs text-${levelColor}-400 border border-${levelColor}-500 border-opacity-30">
+                                        ${suggestion.automation_level}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         function handleFeatureDetection(data) {
@@ -863,11 +1113,16 @@
             updateProgressBars();
             updateLivePlansDisplay();
             updateFeaturePanel();
+            updateFraudPanel();
+            updateSafetyNodesPanel();
+            updateTechPanel();
         }
 
+        // UPDATED PROCESSING PHASE WITH FRAUD DETECTION PANELS
         function renderProcessingPhase() {
             return `
-                <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+                <div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
+                    <!-- Left Sidebar (1 column) -->
                     <div class="xl:col-span-1 space-y-4">
                         <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-xl p-4 border border-slate-700">
                             <div class="text-center mb-3">
@@ -903,7 +1158,8 @@
                         </div>
                     </div>
 
-                    <div class="xl:col-span-3">
+                    <!-- Center Area (2 columns) - Features -->
+                    <div class="xl:col-span-2">
                         <div class="feature-panel bg-gradient-to-br from-pink-900 via-purple-900 to-slate-900 bg-opacity-60 backdrop-blur-xl rounded-2xl p-8 border-2 border-pink-500 border-opacity-40 shadow-2xl">
                             <div class="flex items-center justify-between mb-6 pb-4 border-b border-pink-500 border-opacity-30">
                                 <div class="flex items-center gap-4">
@@ -952,6 +1208,56 @@
                             </div>
 
                             <div id="featureList" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[700px] overflow-y-auto scroll-smooth pr-3">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Sidebar (2 columns) - Fraud & Tech -->
+                    <div class="xl:col-span-2 space-y-4">
+                        <!-- Fraud Detection Panel -->
+                        <div class="bg-gradient-to-br from-red-900 via-slate-900 to-slate-900 bg-opacity-60 backdrop-blur-xl rounded-2xl p-6 border-2 border-red-500 border-opacity-40 shadow-2xl">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-600 rounded-xl flex items-center justify-center text-3xl">
+                                        🛡️
+                                    </div>
+                                    <div>
+                                        <h2 class="text-2xl font-bold text-red-300">Fraud Detection</h2>
+                                        <p class="text-slate-400 text-xs">Real-time security monitoring</p>
+                                    </div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-4xl font-bold text-red-400" id="fraudAlertCounter">${state.fraudAlertCount}</div>
+                                    <div class="text-xs text-slate-400">Alerts</div>
+                                </div>
+                            </div>
+                            <div id="fraudDetectionList" class="space-y-3 max-h-96 overflow-y-auto scroll-smooth">
+                            </div>
+                        </div>
+
+                        <!-- Safety Nodes Panel -->
+                        <div class="bg-gradient-to-br from-blue-900 via-slate-900 to-slate-900 bg-opacity-60 backdrop-blur-xl rounded-2xl p-6 border-2 border-blue-500 border-opacity-40">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-10 h-10 bg-blue-500 bg-opacity-20 rounded-xl flex items-center justify-center text-2xl">🔒</div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-blue-300">Safety Nodes Generated</h3>
+                                    <p class="text-slate-400 text-xs">Automatic protection systems</p>
+                                </div>
+                            </div>
+                            <div id="safetyNodesList" class="space-y-3 max-h-64 overflow-y-auto scroll-smooth">
+                            </div>
+                        </div>
+
+                        <!-- Tech Integration Panel -->
+                        <div class="bg-gradient-to-br from-purple-900 via-slate-900 to-slate-900 bg-opacity-60 backdrop-blur-xl rounded-2xl p-6 border-2 border-purple-500 border-opacity-40">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-10 h-10 bg-purple-500 bg-opacity-20 rounded-xl flex items-center justify-center text-2xl">🔧</div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-purple-300">Tech Integration</h3>
+                                    <p class="text-slate-400 text-xs">Automation suggestions</p>
+                                </div>
+                            </div>
+                            <div id="techSuggestionsList" class="space-y-3 max-h-96 overflow-y-auto scroll-smooth">
                             </div>
                         </div>
                     </div>
@@ -1044,7 +1350,11 @@
                 discoveredFeatures: [],
                 featureCount: 0,
                 naturalLanguageInput: '',
-                showConfirmation: false
+                showConfirmation: false,
+                fraudDetections: [],
+                fraudAlertCount: 0,
+                techSuggestions: [],
+                safetyNodes: []
             });
         }
 
@@ -1100,7 +1410,11 @@
                 discoveredFeatures: [],
                 featureCount: 0,
                 naturalLanguageInput: '',
-                showConfirmation: false
+                showConfirmation: false,
+                fraudDetections: [],
+                fraudAlertCount: 0,
+                techSuggestions: [],
+                safetyNodes: []
             });
         }
 
@@ -1123,7 +1437,7 @@
                         <div class="text-center mb-8">
                             <div class="w-16 h-16 bg-purple-500 rounded-full mx-auto mb-4 flex items-center justify-center text-4xl">🧠</div>
                             <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-2">AI Planner</h1>
-                            <p class="text-slate-400">Feature Detection System</p>
+                            <p class="text-slate-400">Feature Detection + Fraud Detection System</p>
                         </div>
 
                         <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border border-slate-700 shadow-2xl">
@@ -1173,7 +1487,7 @@
                                 <div class="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-2xl">🧠</div>
                                 <div>
                                     <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">AI Collaborative Planner</h1>
-                                    <p class="text-slate-400 text-sm">Feature Detection + Real-time Generation</p>
+                                    <p class="text-slate-400 text-sm">Feature Detection + Fraud Detection + Real-time Generation</p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-4">
