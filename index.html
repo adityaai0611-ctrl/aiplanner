@@ -124,20 +124,197 @@
             eventSource: null,
             discoveredFeatures: [],
             featureCount: 0,
-            newFeatureAnimation: null
+            newFeatureAnimation: null,
+            naturalLanguageInput: '',
+            showConfirmation: false
         };
 
         function setState(updates) {
             const needsFullRender = 
                 updates.hasOwnProperty('isAuthenticated') ||
                 updates.hasOwnProperty('showLogin') ||
-                updates.hasOwnProperty('phase');
+                updates.hasOwnProperty('phase') ||
+                updates.hasOwnProperty('showConfirmation');
             
             state = { ...state, ...updates };
             
             if (needsFullRender) {
                 render();
             }
+        }
+
+        async function parseNaturalLanguage() {
+            const input = document.getElementById('naturalLanguageInput').value.trim();
+            const parseButton = document.getElementById('parseButton');
+            const parseButtonText = document.getElementById('parseButtonText');
+            
+            if (!input) {
+                alert('Please enter some text to convert');
+                return;
+            }
+            
+            if (input.length < 10) {
+                alert('Please provide more details (at least 10 characters)');
+                return;
+            }
+            
+            setState({ isLoading: true });
+            if (parseButtonText) parseButtonText.textContent = 'Converting...';
+            if (parseButton) parseButton.disabled = true;
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/parse-natural-language', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ input: input })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    setState({
+                        aim: data.aim,
+                        steps: data.steps,
+                        naturalLanguageInput: input,
+                        showConfirmation: true,
+                        isLoading: false
+                    });
+                } else {
+                    alert('❌ ' + (data.message || 'Failed to parse input'));
+                    setState({ isLoading: false });
+                }
+                
+            } catch (error) {
+                console.error('Parse error:', error);
+                alert('❌ Unable to connect to server');
+                setState({ isLoading: false });
+            } finally {
+                if (parseButtonText) parseButtonText.textContent = 'Convert to AIM + Steps';
+                if (parseButton) parseButton.disabled = false;
+            }
+        }
+
+        function confirmAndStartPlanning() {
+            setState({ 
+                showConfirmation: false,
+                naturalLanguageInput: ''
+            });
+            startPlanning();
+        }
+
+        function goBackToEdit() {
+            setState({ 
+                showConfirmation: false
+            });
+            
+            setTimeout(() => {
+                const nlInput = document.getElementById('naturalLanguageInput');
+                if (nlInput) {
+                    nlInput.value = state.naturalLanguageInput;
+                    nlInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    nlInput.focus();
+                }
+            }, 100);
+        }
+
+        function renderConfirmationScreen() {
+            return `
+                <div class="space-y-6 max-w-5xl mx-auto">
+                    <div class="text-center">
+                        <div class="w-20 h-20 bg-gradient-to-br from-green-500 to-blue-500 rounded-full mx-auto mb-4 flex items-center justify-center text-5xl animate-bounce">
+                            ✅
+                        </div>
+                        <h2 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-400 mb-2">
+                            AI Interpretation Complete
+                        </h2>
+                        <p class="text-slate-400 text-lg">
+                            Please review and confirm the structured plan below
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-xl p-6 border border-slate-700">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="text-2xl">📝</span>
+                            <h3 class="text-lg font-semibold text-slate-300">Your Original Input:</h3>
+                        </div>
+                        <div class="bg-slate-900 bg-opacity-50 rounded-lg p-4 border border-slate-600">
+                            <p class="text-slate-300 italic leading-relaxed">"${state.naturalLanguageInput}"</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-green-900 via-blue-900 to-slate-900 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border-2 border-green-500 border-opacity-30 shadow-2xl">
+                        <div class="flex items-center gap-3 mb-6">
+                            <span class="text-4xl">🎯</span>
+                            <div>
+                                <h3 class="text-2xl font-bold text-green-300">AI Interpreted This As:</h3>
+                                <p class="text-slate-400 text-sm">Structured into AIM and STEPS format</p>
+                            </div>
+                        </div>
+
+                        <div class="mb-6">
+                            <div class="flex items-center gap-2 mb-3">
+                                <div class="w-8 h-8 bg-blue-500 bg-opacity-20 rounded-lg flex items-center justify-center">
+                                    <span class="text-xl">🎯</span>
+                                </div>
+                                <h4 class="text-xl font-bold text-blue-300">Main Goal (AIM)</h4>
+                            </div>
+                            <div class="bg-slate-900 bg-opacity-50 rounded-xl p-5 border-l-4 border-blue-500">
+                                <p class="text-white text-lg font-medium leading-relaxed">${state.aim}</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <div class="w-8 h-8 bg-purple-500 bg-opacity-20 rounded-lg flex items-center justify-center">
+                                    <span class="text-xl">➡️</span>
+                                </div>
+                                <h4 class="text-xl font-bold text-purple-300">Action Steps (${Object.keys(state.steps).length} steps)</h4>
+                            </div>
+                            <div class="space-y-3">
+                                ${Object.entries(state.steps).map(([key, step], index) => `
+                                    <div class="flex items-start gap-3 bg-slate-900 bg-opacity-50 rounded-xl p-4 border-l-4 border-purple-500 slide-up" style="animation-delay: ${index * 0.05}s">
+                                        <div class="w-8 h-8 bg-purple-500 bg-opacity-20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <span class="text-purple-300 font-bold">${index + 1}</span>
+                                        </div>
+                                        <p class="text-slate-200 text-base leading-relaxed pt-1">${step}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-4">
+                        <button 
+                            onclick="goBackToEdit()"
+                            class="flex-1 flex items-center justify-center gap-3 py-4 bg-slate-700 hover:bg-slate-600 rounded-xl font-semibold text-lg transition-all border-2 border-slate-600 hover:border-slate-500"
+                        >
+                            <span class="text-2xl">⬅️</span>
+                            <span>Go Back & Edit</span>
+                        </button>
+                        
+                        <button 
+                            onclick="confirmAndStartPlanning()"
+                            class="flex-1 flex items-center justify-center gap-3 py-4 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 rounded-xl font-semibold text-lg transition-all shadow-lg border-2 border-green-500 border-opacity-30"
+                        >
+                            <span class="text-2xl">🚀</span>
+                            <span>Looks Good! Start Planning</span>
+                        </button>
+                    </div>
+
+                    <div class="bg-blue-500 bg-opacity-10 border border-blue-500 border-opacity-30 rounded-xl p-4">
+                        <div class="flex items-start gap-3">
+                            <span class="text-2xl">💡</span>
+                            <div>
+                                <p class="text-blue-300 font-semibold mb-1">What happens next?</p>
+                                <p class="text-slate-400 text-sm">
+                                    If you click "Start Planning", our 12 AI agents will analyze and improve this plan from different perspectives, 
+                                    discovering new features and optimizations in real-time.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
         async function startPlanning() {
@@ -297,7 +474,7 @@
                         const completedMiniPlan = {
                             group: event.data.group,
                             preview: event.data.mini_plan,
-                            steps: event.data.steps || parseStepsFromPlan(event.data.mini_plan),
+                            steps: parseStepsFromPlan(event.data.mini_plan),
                             startTime: miniPlan.startTime || completionTime,
                             endTime: completionTime,
                             duration: duration,
@@ -623,7 +800,6 @@
                 'improved': 'bg-pink-500'
             };
 
-            // ⭐ NEW: Get latest mini-plan steps
             const latestMiniPlan = planData.mini_plans.length > 0 ? 
                 planData.mini_plans[planData.mini_plans.length - 1] : null;
             
@@ -655,7 +831,6 @@
                         </div>
                     ` : ''}
 
-                    ${/* ⭐ NEW: Show latest steps in compact view */}
                     ${latestSteps.length > 0 ? `
                         <div class="bg-slate-800 bg-opacity-50 rounded-lg p-3 max-h-48 overflow-y-auto space-y-1.5">
                             <div class="text-xs font-semibold text-blue-400 mb-2 flex items-center gap-1">
@@ -777,40 +952,6 @@
                             </div>
 
                             <div id="featureList" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[700px] overflow-y-auto scroll-smooth pr-3">
-                                ${state.discoveredFeatures.map((featureObj, index) => {
-                                    const feature = featureObj.feature || featureObj;
-                                    const source = featureObj.source || 'unknown';
-                                    const sourceIcon = source.includes('aim') ? '📍' : source.includes('mini_plan') ? '🤖' : source.includes('improvement') ? '⚡' : '✨';
-                                    const sourceColor = source.includes('aim') ? 'purple' : source.includes('mini_plan') ? 'blue' : source.includes('improvement') ? 'green' : 'pink';
-                                    
-                                    return `
-                                        <div class="feature-badge bg-gradient-to-br from-slate-900 to-${sourceColor}-900 bg-opacity-50 backdrop-blur-sm border-2 border-${sourceColor}-500 border-opacity-30 rounded-xl p-4 hover:border-opacity-60 transition-all duration-300 hover:scale-105"
-                                             style="animation-delay: ${index * 0.03}s">
-                                            <div class="flex items-start gap-3">
-                                                <div class="w-10 h-10 bg-${sourceColor}-500 bg-opacity-20 rounded-lg flex items-center justify-center flex-shrink-0 text-2xl">
-                                                    ${sourceIcon}
-                                                </div>
-                                                <div class="flex-1">
-                                                    <div class="text-slate-100 font-medium text-sm leading-relaxed mb-2">
-                                                        ${typeof feature === 'string' ? feature : feature.text || 'Unknown feature'}
-                                                    </div>
-                                                    <div class="flex items-center gap-2">
-                                                        <span class="text-xs px-2 py-0.5 bg-${sourceColor}-500 bg-opacity-20 rounded text-${sourceColor}-400 border border-${sourceColor}-500 border-opacity-30">
-                                                            ${source}
-                                                        </span>
-                                                        <span class="text-xs text-slate-500">#${index + 1}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    `;
-                                }).join('') || `
-                                    <div class="col-span-2 text-center py-20">
-                                        <div class="text-6xl mb-4 pulse-animate">🔍</div>
-                                        <p class="text-slate-400 text-lg">Waiting for AI to discover features...</p>
-                                        <p class="text-slate-500 text-sm mt-2">Features will appear here in real-time</p>
-                                    </div>
-                                `}
                             </div>
                         </div>
                     </div>
@@ -901,7 +1042,9 @@
                 liveAgentPlans: {},
                 analyticsData: {},
                 discoveredFeatures: [],
-                featureCount: 0
+                featureCount: 0,
+                naturalLanguageInput: '',
+                showConfirmation: false
             });
         }
 
@@ -955,7 +1098,9 @@
                 liveAgentPlans: {},
                 analyticsData: {},
                 discoveredFeatures: [],
-                featureCount: 0
+                featureCount: 0,
+                naturalLanguageInput: '',
+                showConfirmation: false
             });
         }
 
@@ -1042,9 +1187,10 @@
                             </div>
                         </div>
 
-                        ${state.phase === 'input' ? renderInputPhase() : ''}
-                        ${state.phase === 'processing' ? renderProcessingPhase() : ''}
-                        ${state.phase === 'results' ? renderResultsPhase() : ''}
+                        ${state.showConfirmation ? renderConfirmationScreen() : ''}
+                        ${!state.showConfirmation && state.phase === 'input' ? renderInputPhase() : ''}
+                        ${!state.showConfirmation && state.phase === 'processing' ? renderProcessingPhase() : ''}
+                        ${!state.showConfirmation && state.phase === 'results' ? renderResultsPhase() : ''}
                     </div>
                 </div>
             `;
@@ -1056,42 +1202,110 @@
             const isFormValid = isAimValid && areStepsValid;
             
             return `
-                <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border border-slate-700 shadow-2xl">
-                    <div class="mb-8">
-                        <label class="flex items-center gap-2 text-xl font-semibold mb-3">
-                            <span class="text-2xl">🎯</span>
-                            Your Goal
-                        </label>
-                        <input type="text" id="aim" value="${state.aim}" placeholder="Enter your main objective..." class="w-full px-6 py-4 bg-slate-900 bg-opacity-50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg" />
-                    </div>
-
-                    <div class="mb-8">
-                        <label class="flex items-center gap-2 text-xl font-semibold mb-3">
-                            <span class="text-2xl">➡️</span>
-                            Initial Steps
-                        </label>
-                        <div id="stepsContainer">
-                            ${Object.entries(state.steps).map(([key, value], index) => `
-                                <div class="flex gap-3 mb-3">
-                                    <input type="text" data-step-key="${key}" value="${value}" placeholder="Step ${index + 1}..." class="flex-1 px-6 py-3 bg-slate-900 bg-opacity-50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500" />
-                                    ${Object.keys(state.steps).length > 1 ? `
-                                        <button onclick="removeStep('${key}')" class="px-4 py-3 bg-red-500 bg-opacity-20 hover:bg-opacity-30 rounded-xl transition-colors text-red-400 font-bold">
-                                            ✕
-                                        </button>
-                                    ` : ''}
-                                </div>
-                            `).join('')}
+                <div class="space-y-6">
+                    <div class="bg-gradient-to-br from-blue-900 via-purple-900 to-slate-900 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border-2 border-blue-500 border-opacity-30 shadow-2xl">
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="text-4xl">🧠</span>
+                            <div>
+                                <h2 class="text-2xl font-bold text-blue-300">Quick Start: Natural Language</h2>
+                                <p class="text-slate-400 text-sm">Describe your goal in plain words, and AI will structure it for you</p>
+                            </div>
                         </div>
-                        <button onclick="addStep()" class="flex items-center gap-2 px-6 py-3 bg-purple-500 bg-opacity-20 hover:bg-opacity-30 rounded-xl transition-colors text-purple-300">
-                            <span class="text-xl">➕</span>
-                            Add Step
-                        </button>
+                        
+                        <textarea 
+                            id="naturalLanguageInput" 
+                            placeholder="Example: I want to create a mobile app that helps people track their daily water intake..."
+                            class="w-full h-32 px-6 py-4 bg-slate-900 bg-opacity-50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg resize-none"
+                            ${state.isLoading ? 'disabled' : ''}
+                        ></textarea>
+                        
+                        <div class="flex items-center gap-3 mt-4">
+                            <button 
+                                id="parseButton"
+                                onclick="parseNaturalLanguage()" 
+                                ${state.isLoading ? 'disabled' : ''}
+                                class="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-600 rounded-xl font-semibold transition-all shadow-lg"
+                            >
+                                <span class="text-xl">✨</span>
+                                <span id="parseButtonText">Convert to AIM + Steps</span>
+                            </button>
+                            
+                            <span class="text-slate-400 text-sm">or fill the form below manually</span>
+                        </div>
                     </div>
 
-                    <button id="planButton" onclick="startPlanning()" ${!isFormValid || state.isLoading ? 'disabled' : ''} class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed rounded-xl font-semibold text-lg transition-all shadow-lg">
-                        ${state.isLoading ? 'Processing...' : '✨ Start AI Planning'}
-                    </button>
-                    <p id="errorMsg" style="display: ${isFormValid ? 'none' : 'block'}" class="text-sm text-red-400 mt-2 text-center">Please fill all fields to continue</p>
+                    <div class="flex items-center gap-4">
+                        <div class="flex-1 h-px bg-gradient-to-r from-transparent via-slate-600 to-transparent"></div>
+                        <span class="text-slate-500 text-sm font-semibold">OR ENTER MANUALLY</span>
+                        <div class="flex-1 h-px bg-gradient-to-r from-transparent via-slate-600 to-transparent"></div>
+                    </div>
+
+                    <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border border-slate-700 shadow-2xl">
+                        <div class="mb-8">
+                            <label class="flex items-center gap-2 text-xl font-semibold mb-3">
+                                <span class="text-2xl">🎯</span>
+                                Your Goal
+                            </label>
+                            <input 
+                                type="text" 
+                                id="aim" 
+                                value="${state.aim}" 
+                                placeholder="Enter your main objective..." 
+                                class="w-full px-6 py-4 bg-slate-900 bg-opacity-50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg" 
+                                ${state.isLoading ? 'disabled' : ''}
+                            />
+                        </div>
+
+                        <div class="mb-8">
+                            <label class="flex items-center gap-2 text-xl font-semibold mb-3">
+                                <span class="text-2xl">➡️</span>
+                                Initial Steps
+                            </label>
+                            <div id="stepsContainer">
+                                ${Object.entries(state.steps).map(([key, value], index) => `
+                                    <div class="flex gap-3 mb-3">
+                                        <input 
+                                            type="text" 
+                                            data-step-key="${key}" 
+                                            value="${value}" 
+                                            placeholder="Step ${index + 1}..." 
+                                            class="flex-1 px-6 py-3 bg-slate-900 bg-opacity-50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500" 
+                                            ${state.isLoading ? 'disabled' : ''}
+                                        />
+                                        ${Object.keys(state.steps).length > 1 ? `
+                                            <button 
+                                                onclick="removeStep('${key}')" 
+                                                class="px-4 py-3 bg-red-500 bg-opacity-20 hover:bg-opacity-30 rounded-xl transition-colors text-red-400 font-bold"
+                                                ${state.isLoading ? 'disabled' : ''}
+                                            >
+                                                ✕
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <button 
+                                onclick="addStep()" 
+                                class="flex items-center gap-2 px-6 py-3 bg-purple-500 bg-opacity-20 hover:bg-opacity-30 rounded-xl transition-colors text-purple-300"
+                                ${state.isLoading ? 'disabled' : ''}
+                            >
+                                <span class="text-xl">➕</span>
+                                Add Step
+                            </button>
+                        </div>
+
+                        <button 
+                            id="planButton" 
+                            onclick="startPlanning()" 
+                            ${!isFormValid || state.isLoading ? 'disabled' : ''} 
+                            class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed rounded-xl font-semibold text-lg transition-all shadow-lg"
+                        >
+                            ${state.isLoading ? '⏳ Processing...' : '✨ Start AI Planning'}
+                        </button>
+                        <p id="errorMsg" style="display: ${isFormValid ? 'none' : 'block'}" class="text-sm text-red-400 mt-2 text-center">
+                            Please fill all fields to continue
+                        </p>
+                    </div>
                 </div>
             `;
         }
