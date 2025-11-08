@@ -6,7 +6,6 @@
     <title>AI Planner - Feature Detection + Fraud Detection</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* ... KEEP ALL EXISTING STYLES ... */
         @keyframes slideUp {
             from {
                 transform: translateY(20px);
@@ -100,7 +99,6 @@
             top: 20px;
         }
         
-        /* NEW: Fraud alert animation */
         @keyframes alertPulse {
             0%, 100% { 
                 box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
@@ -119,7 +117,7 @@
     <div id="app" class="min-h-screen"></div>
 
     <script>
-        // UPDATED STATE WITH FRAUD DETECTION AND TOOL MANAGEMENT
+        // UPDATED STATE WITH FRAUD DETECTION, TOOL MANAGEMENT AND COMPETITION TRACKING
         let state = {
             isAuthenticated: false,
             showLogin: true,
@@ -147,11 +145,18 @@
             fraudAlertCount: 0,
             techSuggestions: [],
             safetyNodes: [],
-            // NEW: Tool management
+            // Tool management
             toolName: '',
             isToolProcessing: false,
-            activeTool: null,  // {name, toolPath, paramPath}
-            toolProcessingStatus: ''
+            activeTool: null,
+            toolProcessingStatus: '',
+            // Competition tracking
+            competitionData: {
+                aim: null,
+                steps: [],
+                summary: null
+            },
+            showCompetitionPanel: true
         };
 
         function setState(updates) {
@@ -379,7 +384,12 @@
                 fraudDetections: [],
                 fraudAlertCount: 0,
                 techSuggestions: [],
-                safetyNodes: []
+                safetyNodes: [],
+                competitionData: {
+                    aim: null,
+                    steps: [],
+                    summary: null
+                }
             });
 
             try {
@@ -447,7 +457,7 @@
             return steps;
         }
 
-        // UPDATED handleRealtimeEvent WITH NEW CASES
+        // UPDATED handleRealtimeEvent WITH COMPETITION EVENT HANDLERS
         function handleRealtimeEvent(event) {
             console.log('Real-time event:', event);
             state.realtimeEvents.push(event);
@@ -471,6 +481,19 @@
                 case 'features_discovered':
                 case 'features_detected':
                     handleFeatureDetection(event.data);
+                    break;
+
+                // NEW COMPETITION EVENT HANDLERS
+                case 'aim_competition_analyzed':
+                    handleAimCompetition(event.data);
+                    break;
+
+                case 'step_competition_analyzed':
+                    handleStepCompetition(event.data);
+                    break;
+
+                case 'summary_competition_analyzed':
+                    handleSummaryCompetition(event.data);
                     break;
 
                 case 'phase_start':
@@ -622,7 +645,7 @@
                     updateLivePlansDisplay();
                     break;
 
-                // NEW CASES FOR FRAUD DETECTION AND TECH INTEGRATION
+                // FRAUD DETECTION AND TECH INTEGRATION CASES
                 case 'fraud_detection':
                     handleFraudDetection(event.data);
                     break;
@@ -652,7 +675,165 @@
             }
         }
 
-        // NEW FRAUD DETECTION FUNCTIONS
+        // NEW COMPETITION HANDLING FUNCTIONS
+        function handleAimCompetition(data) {
+            console.log('AIM Competition:', data);
+            state.competitionData.aim = data;
+            
+            const competitorCount = data.aim_competitors?.length || 0;
+            addLogMessage(`🏢 AIM Analysis: Found ${competitorCount} competitors`, 'info');
+            
+            updateCompetitionPanel();
+        }
+
+        function handleStepCompetition(data) {
+            console.log('Step Competition:', data);
+            state.competitionData.steps.push(data);
+            
+            const totalCompanies = data.total_companies || 0;
+            addLogMessage(`🏢 Step Analysis (${data.source}): ${totalCompanies} companies`, 'info');
+            
+            updateCompetitionPanel();
+        }
+
+        function handleSummaryCompetition(data) {
+            console.log('Summary Competition:', data);
+            state.competitionData.summary = data;
+            
+            const clusterCount = data.cluster_analysis?.length || 0;
+            addLogMessage(`🏢 Summary Analysis: ${clusterCount} clusters analyzed`, 'info');
+            
+            updateCompetitionPanel();
+        }
+
+        function updateCompetitionPanel() {
+            const panel = document.getElementById('competitionPanel');
+            if (!panel) return;
+
+            const { aim, steps, summary } = state.competitionData;
+            
+            let html = '<div class="space-y-4">';
+
+            // AIM Competition
+            if (aim) {
+                const competitors = aim.aim_competitors || [];
+                html += `
+                    <div class="bg-gradient-to-r from-blue-900 to-purple-900 bg-opacity-40 rounded-xl p-4 border border-blue-500 border-opacity-30">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="text-2xl">🎯</span>
+                            <h3 class="text-lg font-bold text-blue-300">AIM-Level Competitors (${competitors.length})</h3>
+                        </div>
+                        <div class="space-y-2 max-h-60 overflow-y-auto">
+                            ${competitors.map(comp => `
+                                <div class="bg-slate-900 bg-opacity-50 rounded-lg p-3 border-l-4 border-blue-500">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="font-bold text-blue-200">${comp.company_name}</span>
+                                        <span class="px-2 py-1 bg-blue-500 bg-opacity-20 rounded text-xs text-blue-400">
+                                            ${(comp.similarity_score * 100).toFixed(0)}% similar
+                                        </span>
+                                    </div>
+                                    <p class="text-sm text-slate-300 mb-2">${comp.description_of_focus}</p>
+                                    <p class="text-xs text-slate-400"><strong>Product:</strong> ${comp.product_or_service_example}</p>
+                                    <p class="text-xs text-green-400 mt-2"><strong>Your Edge:</strong> ${comp.differentiation_factor}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                        ${aim.summary ? `<p class="text-sm text-slate-400 mt-3 italic">${aim.summary}</p>` : ''}
+                    </div>
+                `;
+            }
+
+            // Step Competition Summary
+            if (steps.length > 0) {
+                const totalCompanies = steps.reduce((sum, s) => sum + (s.total_companies || 0), 0);
+                html += `
+                    <div class="bg-gradient-to-r from-purple-900 to-pink-900 bg-opacity-40 rounded-xl p-4 border border-purple-500 border-opacity-30">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="text-2xl">🔍</span>
+                            <h3 class="text-lg font-bold text-purple-300">Step-Level Analysis</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 mb-3">
+                            <div class="bg-slate-900 bg-opacity-50 rounded p-2 text-center">
+                                <div class="text-2xl font-bold text-purple-400">${steps.length}</div>
+                                <div class="text-xs text-slate-400">Analyses</div>
+                            </div>
+                            <div class="bg-slate-900 bg-opacity-50 rounded p-2 text-center">
+                                <div class="text-2xl font-bold text-pink-400">${totalCompanies}</div>
+                                <div class="text-xs text-slate-400">Companies</div>
+                            </div>
+                        </div>
+                        <div class="space-y-2 max-h-48 overflow-y-auto">
+                            ${steps.slice(-3).reverse().map(stepData => `
+                                <div class="bg-slate-900 bg-opacity-50 rounded p-2 text-xs">
+                                    <span class="text-purple-400 font-semibold">${stepData.source}:</span>
+                                    <span class="text-slate-300"> ${stepData.total_companies} companies found</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Summary Competition
+            if (summary) {
+                const clusters = summary.cluster_analysis || [];
+                const oppMap = summary.opportunity_map || {};
+                html += `
+                    <div class="bg-gradient-to-r from-green-900 to-teal-900 bg-opacity-40 rounded-xl p-4 border border-green-500 border-opacity-30">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="text-2xl">📊</span>
+                            <h3 class="text-lg font-bold text-green-300">Market Clusters (${clusters.length})</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 mb-3">
+                            <div class="bg-green-500 bg-opacity-20 rounded p-2">
+                                <div class="text-xs text-green-400 mb-1">Innovation Hotspots</div>
+                                ${(oppMap.innovation_clusters || []).map(c => `
+                                    <div class="text-xs text-slate-300">• ${c}</div>
+                                `).join('')}
+                            </div>
+                            <div class="bg-red-500 bg-opacity-20 rounded p-2">
+                                <div class="text-xs text-red-400 mb-1">Saturated Zones</div>
+                                ${(oppMap.saturated_clusters || []).map(c => `
+                                    <div class="text-xs text-slate-300">• ${c}</div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="space-y-2 max-h-48 overflow-y-auto">
+                            ${clusters.slice(0, 5).map(cluster => `
+                                <div class="bg-slate-900 bg-opacity-50 rounded p-2">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="text-sm font-bold text-green-300">${cluster.cluster_name}</span>
+                                        <div class="w-20 bg-slate-700 rounded-full h-2">
+                                            <div class="bg-gradient-to-r from-green-500 to-red-500 h-2 rounded-full" 
+                                                 style="width: ${(cluster.competition_density * 100).toFixed(0)}%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="text-xs text-slate-400">
+                                        ${cluster.related_steps_count} steps • ${cluster.related_companies?.length || 0} competitors
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            
+            if (!aim && steps.length === 0 && !summary) {
+                html = `
+                    <div class="text-center py-20">
+                        <div class="text-6xl mb-4 pulse-animate">🏢</div>
+                        <p class="text-slate-400 text-lg">Waiting for competition analysis...</p>
+                        <p class="text-slate-500 text-sm mt-2">AI will identify market competitors in real-time</p>
+                    </div>
+                `;
+            }
+
+            panel.innerHTML = html;
+        }
+
+        // FRAUD DETECTION FUNCTIONS
         function handleFraudDetection(data) {
             const result = data.result;
             const agent = data.agent;
@@ -1144,9 +1325,10 @@
             updateFraudPanel();
             updateSafetyNodesPanel();
             updateTechPanel();
+            updateCompetitionPanel();
         }
 
-        // UPDATED PROCESSING PHASE WITH FRAUD DETECTION PANELS
+        // UPDATED PROCESSING PHASE WITH COMPETITION PANEL TOGGLE
         function renderProcessingPhase() {
             return `
                 <div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
@@ -1186,62 +1368,95 @@
                         </div>
                     </div>
 
-                    <!-- Center Area (2 columns) - Features -->
-                    <div class="xl:col-span-2">
-                        <div class="feature-panel bg-gradient-to-br from-pink-900 via-purple-900 to-slate-900 bg-opacity-60 backdrop-blur-xl rounded-2xl p-8 border-2 border-pink-500 border-opacity-40 shadow-2xl">
-                            <div class="flex items-center justify-between mb-6 pb-4 border-b border-pink-500 border-opacity-30">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-16 h-16 bg-gradient-to-br from-pink-500 to-purple-600 rounded-2xl flex items-center justify-center text-4xl shadow-lg">
-                                        ✨
+                    <!-- Center Area (3 columns) - Features/Competition Toggle -->
+                    <div class="xl:col-span-3">
+                        <div class="flex gap-2 mb-4">
+                            <button 
+                                onclick="setState({ showCompetitionPanel: false })"
+                                class="px-4 py-2 rounded-lg font-semibold transition-all ${!state.showCompetitionPanel ? 'bg-pink-600 text-white' : 'bg-slate-700 bg-opacity-50 text-slate-400'}"
+                            >
+                                ✨ Features
+                            </button>
+                            <button 
+                                onclick="setState({ showCompetitionPanel: true })"
+                                class="px-4 py-2 rounded-lg font-semibold transition-all ${state.showCompetitionPanel ? 'bg-blue-600 text-white' : 'bg-slate-700 bg-opacity-50 text-slate-400'}"
+                            >
+                                🏢 Competition
+                            </button>
+                        </div>
+
+                        ${state.showCompetitionPanel ? `
+                            <div class="feature-panel bg-gradient-to-br from-blue-900 via-cyan-900 to-slate-900 bg-opacity-60 backdrop-blur-xl rounded-2xl p-8 border-2 border-blue-500 border-opacity-40 shadow-2xl">
+                                <div class="flex items-center gap-4 mb-6 pb-4 border-b border-blue-500 border-opacity-30">
+                                    <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl flex items-center justify-center text-4xl shadow-lg">
+                                        🏢
                                     </div>
                                     <div>
-                                        <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400">
-                                            Features Discovery
+                                        <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
+                                            Market Competition Analysis
                                         </h2>
-                                        <p class="text-slate-300 text-sm mt-1">Real-time AI Feature Detection System</p>
+                                        <p class="text-slate-300 text-sm mt-1">Real-time Competitor Detection System</p>
                                     </div>
                                 </div>
-                                <div class="text-center">
-                                    <div class="relative inline-block">
-                                        <div class="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-pink-400 via-purple-400 to-pink-300" 
-                                             id="featureCounter">${state.featureCount}</div>
-                                        <div class="absolute -top-3 -right-8 text-green-400 font-bold text-2xl opacity-0 transition-opacity animate-bounce" 
-                                             id="featureAdded" style="transition: opacity 0.3s;">+0</div>
+                                <div id="competitionPanel" class="max-h-[700px] overflow-y-auto scroll-smooth pr-3">
+                                </div>
+                            </div>
+                        ` : `
+                            <div class="feature-panel bg-gradient-to-br from-pink-900 via-purple-900 to-slate-900 bg-opacity-60 backdrop-blur-xl rounded-2xl p-8 border-2 border-pink-500 border-opacity-40 shadow-2xl">
+                                <div class="flex items-center justify-between mb-6 pb-4 border-b border-pink-500 border-opacity-30">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-16 h-16 bg-gradient-to-br from-pink-500 to-purple-600 rounded-2xl flex items-center justify-center text-4xl shadow-lg">
+                                            ✨
+                                        </div>
+                                        <div>
+                                            <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400">
+                                                Features Discovery
+                                            </h2>
+                                            <p class="text-slate-300 text-sm mt-1">Real-time AI Feature Detection System</p>
+                                        </div>
                                     </div>
-                                    <div class="text-slate-400 text-sm mt-1">Total Features</div>
+                                    <div class="text-center">
+                                        <div class="relative inline-block">
+                                            <div class="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-pink-400 via-purple-400 to-pink-300" 
+                                                 id="featureCounter">${state.featureCount}</div>
+                                            <div class="absolute -top-3 -right-8 text-green-400 font-bold text-2xl opacity-0 transition-opacity animate-bounce" 
+                                                 id="featureAdded" style="transition: opacity 0.3s;">+0</div>
+                                        </div>
+                                        <div class="text-slate-400 text-sm mt-1">Total Features</div>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="grid grid-cols-4 gap-4 mb-6">
-                                <div class="bg-slate-900 bg-opacity-40 rounded-xl p-4 border border-pink-500 border-opacity-20">
-                                    <div class="text-2xl mb-1">🎯</div>
-                                    <div class="text-2xl font-bold text-pink-400" id="featureCountMain">${state.featureCount}</div>
-                                    <div class="text-xs text-slate-400">Discovered</div>
+                                <div class="grid grid-cols-4 gap-4 mb-6">
+                                    <div class="bg-slate-900 bg-opacity-40 rounded-xl p-4 border border-pink-500 border-opacity-20">
+                                        <div class="text-2xl mb-1">🎯</div>
+                                        <div class="text-2xl font-bold text-pink-400" id="featureCountMain">${state.featureCount}</div>
+                                        <div class="text-xs text-slate-400">Discovered</div>
+                                    </div>
+                                    <div class="bg-slate-900 bg-opacity-40 rounded-xl p-4 border border-purple-500 border-opacity-20">
+                                        <div class="text-2xl mb-1">📍</div>
+                                        <div class="text-2xl font-bold text-purple-400" id="fromAimCount">0</div>
+                                        <div class="text-xs text-slate-400">From Aim</div>
+                                    </div>
+                                    <div class="bg-slate-900 bg-opacity-40 rounded-xl p-4 border border-blue-500 border-opacity-20">
+                                        <div class="text-2xl mb-1">🤖</div>
+                                        <div class="text-2xl font-bold text-blue-400" id="fromAICount">0</div>
+                                        <div class="text-xs text-slate-400">From AI Plans</div>
+                                    </div>
+                                    <div class="bg-slate-900 bg-opacity-40 rounded-xl p-4 border border-green-500 border-opacity-20">
+                                        <div class="text-2xl mb-1">⚡</div>
+                                        <div class="text-2xl font-bold text-green-400" id="recentCount">0</div>
+                                        <div class="text-xs text-slate-400">Recent (30s)</div>
+                                    </div>
                                 </div>
-                                <div class="bg-slate-900 bg-opacity-40 rounded-xl p-4 border border-purple-500 border-opacity-20">
-                                    <div class="text-2xl mb-1">📍</div>
-                                    <div class="text-2xl font-bold text-purple-400" id="fromAimCount">0</div>
-                                    <div class="text-xs text-slate-400">From Aim</div>
-                                </div>
-                                <div class="bg-slate-900 bg-opacity-40 rounded-xl p-4 border border-blue-500 border-opacity-20">
-                                    <div class="text-2xl mb-1">🤖</div>
-                                    <div class="text-2xl font-bold text-blue-400" id="fromAICount">0</div>
-                                    <div class="text-xs text-slate-400">From AI Plans</div>
-                                </div>
-                                <div class="bg-slate-900 bg-opacity-40 rounded-xl p-4 border border-green-500 border-opacity-20">
-                                    <div class="text-2xl mb-1">⚡</div>
-                                    <div class="text-2xl font-bold text-green-400" id="recentCount">0</div>
-                                    <div class="text-xs text-slate-400">Recent (30s)</div>
-                                </div>
-                            </div>
 
-                            <div id="featureList" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[700px] overflow-y-auto scroll-smooth pr-3">
+                                <div id="featureList" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[700px] overflow-y-auto scroll-smooth pr-3">
+                                </div>
                             </div>
-                        </div>
+                        `}
                     </div>
 
-                    <!-- Right Sidebar (2 columns) - Fraud & Tech -->
-                    <div class="xl:col-span-2 space-y-4">
+                    <!-- Right Sidebar (1 column) - Fraud & Tech -->
+                    <div class="xl:col-span-1 space-y-4">
                         <!-- Fraud Detection Panel -->
                         <div class="bg-gradient-to-br from-red-900 via-slate-900 to-slate-900 bg-opacity-60 backdrop-blur-xl rounded-2xl p-6 border-2 border-red-500 border-opacity-40 shadow-2xl">
                             <div class="flex items-center justify-between mb-4">
@@ -1386,7 +1601,13 @@
                 toolName: '',
                 isToolProcessing: false,
                 activeTool: null,
-                toolProcessingStatus: ''
+                toolProcessingStatus: '',
+                competitionData: {
+                    aim: null,
+                    steps: [],
+                    summary: null
+                },
+                showCompetitionPanel: true
             });
         }
 
@@ -1450,7 +1671,13 @@
                 toolName: '',
                 isToolProcessing: false,
                 activeTool: null,
-                toolProcessingStatus: ''
+                toolProcessingStatus: '',
+                competitionData: {
+                    aim: null,
+                    steps: [],
+                    summary: null
+                },
+                showCompetitionPanel: true
             });
         }
 
@@ -1604,6 +1831,7 @@
                                     placeholder="e.g., Adobe Photoshop, Figma, Microsoft Excel, Blender, AutoCAD..." 
                                     class="w-full px-5 py-4 bg-slate-900 bg-opacity-60 border-2 border-purple-500 border-opacity-30 focus:border-opacity-60 rounded-xl text-white text-lg placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
                                     ${state.isToolProcessing ? 'disabled' : ''}
+                                    oninput="handleToolNameInput(event)"
                                     onkeypress="if(event.key === 'Enter') processTool()"
                                 />
                                 <p class="text-xs text-slate-500 mt-2 flex items-center gap-1">
@@ -1646,8 +1874,27 @@
                             ` : ''}
                             
                             <!-- Info Box -->
+                            <div class="bg-blue-500 bg-opacity-10 border border-blue-500 border-opacity-30 rounded-xl p-4">
+                                <div class="flex items-start gap-3">
+                                    <span class="text-2xl flex-shrink-0">💡</span>
+                                    <div class="text-sm">
+                                        <p class="text-blue-300 font-semibold mb-2">How it works:</p>
+                                        <ol class="text-slate-300 space-y-1.5 list-decimal list-inside">
+                                            <li>AI identifies all tools and features (10 at a time)</li>
+                                            <li>Extracts parameters from each discovered tool</li>
+                                            <li>Saves to Excel files: tool_name.xlsx & parameter.xlsx</li>
+                                            <li>Parameters automatically merge during plan generation</li>
+                                        </ol>
+                                        <p class="text-slate-400 text-xs mt-3">
+                                            📂 Files saved to: C:\\Users\\LENOVO\\Desktop\\
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                    <!-- Natural Language Section (existing code continues) -->
+                    <!-- Natural Language Section -->
                     <div class="bg-gradient-to-br from-blue-900 via-purple-900 to-slate-900 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border-2 border-blue-500 border-opacity-30 shadow-2xl">
                         <div class="flex items-center gap-3 mb-4">
                             <span class="text-4xl">🧠</span>
@@ -1919,7 +2166,7 @@
                 };
             });
 
-            // NEW: Tool name input listener
+            // Tool name input listener
             const toolInput = document.getElementById('toolNameInput');
             if (toolInput) {
                 toolInput.oninput = (e) => {
@@ -1943,6 +2190,15 @@
         }
 
         // Tool Management Functions
+        function handleToolNameInput(event) {
+            state.toolName = event.target.value;
+            // Force re-render to update button state
+            const button = document.querySelector('button[onclick="processTool()"]');
+            if (button) {
+                button.disabled = state.isToolProcessing || !state.toolName.trim();
+            }
+        }
+
         async function processTool() {
             const toolName = document.getElementById('toolNameInput')?.value.trim();
             
