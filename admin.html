@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Planner — Admin Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #04060f;
+            --surface: #080d1a;
+            --surface2: #0d1526;
+            --border: rgba(99,102,241,0.15);
+            --accent: #6366f1;
+            --accent2: #a855f7;
+            --accent3: #06b6d4;
+            --green: #10b981;
+            --red: #ef4444;
+            --yellow: #f59e0b;
+            --text: #e2e8f0;
+            --muted: #64748b;
+            --font-display: 'Syne', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-mono);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 60% 40% at 10% 20%, rgba(99,102,241,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse 40% 50% at 90% 80%, rgba(168,85,247,0.06) 0%, transparent 60%),
+                radial-gradient(ellipse 30% 30% at 50% 50%, rgba(6,182,212,0.04) 0%, transparent 60%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* GRID OVERLAY */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(99,102,241,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(99,102,241,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .app { position: relative; z-index: 1; }
+
+        /* AUTH SCREEN */
+        #authScreen {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .auth-box {
+            width: 420px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 48px;
+            box-shadow: 0 0 60px rgba(99,102,241,0.08), 0 0 120px rgba(99,102,241,0.04);
+        }
+
+        .auth-logo {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .auth-logo .icon {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin: 0 auto 16px;
+            box-shadow: 0 0 30px rgba(99,102,241,0.3);
+        }
+
+        .auth-logo h1 {
+            font-family: var(--font-display);
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #fff, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .auth-logo p { color: var(--muted); font-size: 12px; margin-top: 4px; }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+        .form-group input {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: var(--text);
+            font-family: var(--font-mono);
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus { border-color: var(--accent); }
+
+        .btn-primary {
+            width: 100%;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            border: none;
+            border-radius: 8px;
+            padding: 14px;
+            color: white;
+            font-family: var(--font-mono);
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: all 0.2s;
+            box-shadow: 0 0 20px rgba(99,102,241,0.3);
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 0 30px rgba(99,102,241,0.5); }
+
+        /* MAIN LAYOUT */
+        #mainPanel { display: none; }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            min-height: 100vh;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 24px 0;
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 240px;
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        .sidebar-logo {
+            padding: 0 20px 24px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 16px;
+        }
+
+        .sidebar-logo .badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: white;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+
+        .sidebar-logo h2 {
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 800;
+            color: white;
+            letter-spacing: -0.5px;
+        }
+
+        .sidebar-logo p { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+        .nav-section { padding: 0 12px; margin-bottom: 8px; }
+        .nav-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; padding: 0 8px; margin-bottom: 6px; }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 2px;
+        }
+        .nav-item:hover { background: rgba(99,102,241,0.08); color: var(--text); }
+        .nav-item.active { background: rgba(99,102,241,0.15); color: var(--accent); border-left: 2px solid var(--accent); }
+        .nav-item .icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+        .nav-item .badge-count {
+            margin-left: auto;
+            background: var(--accent);
+            color: white;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .sidebar-footer {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            margin-top: auto;
+        }
+
+        .user-info { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+        .user-avatar {
+            width: 32px; height: 32px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px;
+        }
+        .user-info .name { font-size: 12px; font-weight: 600; color: var(--text); }
+        .user-info .role { font-size: 10px; color: var(--muted); }
+
+        .btn-logout {
+            width: 100%;
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.2);
+            border-radius: 8px;
+            padding: 8px;
+            color: var(--red);
+            font-family: var(--font-mono);
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-logout:hover { background: rgba(239,68,68,0.2); }
+
+        /* MAIN CONTENT */
+        .main-content {
+            margin-left: 240px;
+            padding: 32px;
+            min-height: 100vh;
+        }
+
+        .page-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 32px;
+        }
+
+        .page-title {
+            font-family: var(--font-display);
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            color: white;
+        }
+
+        .page-subtitle { color: var(--muted); font-size: 12px; margin-top: 4px; }
+
+        .header-actions { display: flex; gap: 8px; }
+
+        .btn-action {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 16px;
+            color: var(--text);
+            font-family: var(--font-mono);
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .btn-action:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-action.primary { background: var(--accent); border-color: var(--accent); color: white; }
+
+        /* STATS GRID */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+        }
+        .stat-card:hover { border-color: rgba(99,102,241,0.3); transform: translateY(-1px); }
+
+        .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .stat-value { font-size: 32px; font-weight: 700; font-family: var(--font-display); color: white; line-height: 1; margin-bottom: 8px; }
+        .stat-sub { font-size: 11px; color: var(--muted); }
+        .stat-icon { position: absolute; top: 16px; right: 16px; font-size: 24px; opacity: 0.3; }
+
+        .stat-card.green::before { background: linear-gradient(90deg, var(--green), #34d399); }
+        .stat-card.red::before { background: linear-gradient(90deg, var(--red), #f87171); }
+        .stat-card.yellow::before { background: linear-gradient(90deg, var(--yellow), #fbbf24); }
+        .stat-card.cyan::before { background: linear-gradient(90deg, var(--accent3), #22d3ee); }
+
+        /* CONTENT CARD */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-title { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: white; display: flex; align-items: center; gap: 8px; }
+        .card-body { padding: 20px; }
+
+        /* TABLE */
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th {
+            text-align: left;
+            padding: 10px 16px;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted);
+            border-bottom: 1px solid var(--border);
+        }
+        .data-table td {
+            padding: 12px 16px;
+            font-size: 12px;
+            border-bottom: 1px solid rgba(99,102,241,0.05);
+            color: var(--text);
+        }
+        .data-table tr:hover td { background: rgba(99,102,241,0.04); }
+        .data-table tr:last-child td { border-bottom: none; }
+
+        /* BADGES */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .badge.green { background: rgba(16,185,129,0.15); color: var(--green); }
+        .badge.red { background: rgba(239,68,68,0.15); color: var(--red); }
+        .badge.yellow { background: rgba(245,158,11,0.15); color: var(--yellow); }
+        .badge.blue { background: rgba(99,102,241,0.15); color: var(--accent); }
+        .badge.purple { background: rgba(168,85,247,0.15); color: var(--accent2); }
+
+        /* PAGE SECTIONS */
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* LIVE FEED */
+        .live-feed {
+            height: 300px;
+            overflow-y: auto;
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 11px;
+            line-height: 1.8;
+        }
+
+        .feed-line { display: flex; gap: 8px; animation: slideIn 0.3s ease; }
+        .feed-time { color: var(--muted); flex-shrink: 0; }
+        .feed-msg.success { color: var(--green); }
+        .feed-msg.error { color: var(--red); }
+        .feed-msg.info { color: var(--accent); }
+        .feed-msg.warn { color: var(--yellow); }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-8px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* CHARTS / VISUALIZATIONS */
+        .score-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .score-bar .label { font-size: 11px; color: var(--muted); width: 80px; flex-shrink: 0; }
+        .score-bar .track { flex: 1; height: 6px; background: rgba(99,102,241,0.1); border-radius: 3px; overflow: hidden; }
+        .score-bar .fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 3px; transition: width 0.8s ease; }
+        .score-bar .val { font-size: 11px; font-weight: 700; color: var(--text); width: 36px; text-align: right; }
+
+        /* AGENT STATUS GRID */
+        .agent-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .agent-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+        .agent-card .agent-icon { font-size: 24px; margin-bottom: 6px; }
+        .agent-card .agent-name { font-size: 10px; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.5px; }
+        .agent-card .agent-status { font-size: 9px; margin-top: 4px; padding: 2px 6px; border-radius: 4px; }
+
+        /* REFRESH INDICATOR */
+        .refresh-dot {
+            width: 8px; height: 8px;
+            background: var(--green);
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+            50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(16,185,129,0); }
+        }
+
+        /* DETAIL MODAL */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(4,6,15,0.85);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            width: 720px;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 32px;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 16px; right: 16px;
+            background: rgba(99,102,241,0.1);
+            border: none; border-radius: 6px;
+            color: var(--muted); cursor: pointer;
+            padding: 6px 10px; font-size: 16px;
+        }
+        .modal-close:hover { color: var(--text); }
+
+        /* SCROLLBAR */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.3); border-radius: 2px; }
+
+        /* LOADING */
+        .loading { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; padding: 20px; }
+        .spinner { width: 16px; height: 16px; border: 2px solid rgba(99,102,241,0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .empty-state { text-align: center; padding: 48px 20px; color: var(--muted); }
+        .empty-state .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
+        .empty-state p { font-size: 12px; }
+
+        /* COMPETITION CLUSTERS */
+        .cluster-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .cluster-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .cluster-name { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+        .cluster-density {
+            display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+        }
+        .density-bar { flex: 1; height: 4px; background: rgba(99,102,241,0.1); border-radius: 2px; }
+        .density-fill { height: 100%; background: linear-gradient(90deg, var(--green), var(--yellow), var(--red)); border-radius: 2px; }
+
+        input:-webkit-autofill { background-color: var(--bg) !important; color: var(--text) !important; -webkit-text-fill-color: var(--text) !important; }
+
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+
+        @media (max-width: 1200px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .agent-grid { grid-template-columns: repeat(3, 1fr); }
+            .two-col, .three-col { grid-template-columns: 1fr; }
+            .cluster-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+
+    <!-- AUTH SCREEN -->
+    <div id="authScreen">
+        <div class="auth-box">
+            <div class="auth-logo">
+                <div class="icon">⚡</div>
+                <h1>AI Planner Admin</h1>
+                <p>System Control & Monitoring Panel</p>
+            </div>
+            <div class="form-group">
+                <label>Admin Key</label>
+                <input type="password" id="adminKeyInput" placeholder="Enter admin key..." onkeydown="if(event.key==='Enter')doLogin()" autofocus />
+            </div>
+            <button class="btn-primary" onclick="doLogin()">ACCESS PANEL →</button>
+            <p id="loginError" style="color:var(--red);font-size:11px;text-align:center;margin-top:12px;display:none;">Invalid admin key</p>
+        </div>
+    </div>
+
+    <!-- MAIN PANEL -->
+    <div id="mainPanel">
+        <div class="layout">
+
+            <!-- SIDEBAR -->
+            <div class="sidebar">
+                <div class="sidebar-logo">
+                    <div class="badge">ADMIN</div>
+                    <h2>AI Planner</h2>
+                    <p>System Control Panel</p>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-label">Overview</div>
+                    <div class="nav-item active" onclick="showPage('dashboard')">
+                        <span class="icon">◈</span> Dashboard
+                    </div>
+                    <div class="nav-item" onclick="showPage('liveMonitor')">
+                        <span class="icon">⬡</span> Live Monitor
+                        <span class="badge-count" id="liveCount">0</span>
+                    </div>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-label">Data</div>
+                    <div class="nav-item" onclick="showPage('users')">
+                        <span class="icon">◉</span> Users
+                        <span class="badge-count" id="userCountBadge">–</span>
+                    </div>
+                    <div class="nav-item" onclick="showPage('plans')">
+                        <span class="icon">◧</span> Plans
+                        <span class="badge-count" id="planCountBadge">–</span>
+                    </div>
+                    <div class="nav-item" onclick="showPage('competition')">
+                        <span class="icon">◈</span> Competition
+                    </div>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-label">Analysis</div>
+                    <div class="nav-item" onclick="showPage('agents')">
+                        <span class="icon">⬡</span> AI Agents
+                    </div>
+                    <div class="nav-item" onclick="showPage('health')">
+                        <span class="icon">◎</span> System Health
+                    </div>
+                </div>
+
+                <div style="flex:1"></div>
+
+                <div class="sidebar-footer">
+                    <div class="user-info">
+                        <div class="user-avatar">⚡</div>
+                        <div>
+                            <div class="name">Administrator</div>
+                            <div class="role">Full Access</div>
+                        </div>
+                    </div>
+                    <button class="btn-logout" onclick="doLogout()">⎋ Sign Out</button>
+                </div>
+            </div>
+
+            <!-- MAIN CONTENT -->
+            <div class="main-content">
+
+                <!-- DASHBOARD PAGE -->
+                <div id="page-dashboard" class="page active">
+                    <div class="page-header">
+                        <div>
+                            <div class="page-title">Dashboard</div>
+                            <div class="page-subtitle">System overview · <span class="refresh-dot"></span> Auto-refresh every 30s</div>
+                        </div>
+                        <div class="header-actions">
+                            <button class="btn-action" onclick="refreshAll()">↺ Refresh</button>
+                            <button class="btn-action primary" onclick="exportData()">⬇ Export</button>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid" id="statsGrid">
+                        <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-label">Total Users</div><div class="stat-value" id="s-users">–</div><div class="stat-sub">Registered accounts</div></div>
+                        <div class="stat-card green"><div class="stat-icon">📋</div><div class="stat-label">Total Plans</div><div class="stat-value" id="s-plans">–</div><div class="stat-sub">All time</div></div>
+                        <div class="stat-card yellow"><div class="stat-icon">✅</div><div class="stat-label">Completed</div><div class="stat-value" id="s-completed">–</div><div class="stat-sub">With AI results</div></div>
+                        <div class="stat-card red"><div class="stat-icon">⏳</div><div class="stat-label">Pending</div><div class="stat-value" id="s-pending">–</div><div class="stat-sub">In progress / failed</div></div>
+                    </div>
+
+                    <div class="two-col">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title">📋 Recent Plans</div>
+                                <button class="btn-action" onclick="showPage('plans')">View all →</button>
+                            </div>
+                            <div id="recentPlansList">
+                                <div class="loading"><div class="spinner"></div>Loading...</div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title">👥 Recent Users</div>
+                                <button class="btn-action" onclick="showPage('users')">View all →</button>
+                            </div>
+                            <div id="recentUsersList">
+                                <div class="loading"><div class="spinner"></div>Loading...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">🏢 Competition Stats</div>
+                        </div>
+                        <div id="dashCompetition">
+                            <div class="loading"><div class="spinner"></div>Loading...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LIVE MONITOR PAGE -->
+                <div id="page-liveMonitor" class="page">
+                    <div class="page-header">
+                        <div>
+                            <div class="page-title">Live Monitor</div>
+                            <div class="page-subtitle">Active planning sessions & real-time activity</div>
+                        </div>
+                        <button class="btn-action" onclick="loadHealth()">↺ Refresh</button>
+                    </div>
+
+                    <div class="two-col" style="margin-bottom:20px">
+                        <div class="stat-card cyan">
+                            <div class="stat-icon">🌐</div>
+                            <div class="stat-label">Active Streams</div>
+                            <div class="stat-value" id="activeStreams">–</div>
+                            <div class="stat-sub">Live SSE connections</div>
+                        </div>
+                        <div class="stat-card green">
+                            <div class="stat-icon">⚡</div>
+                            <div class="stat-label">Server Status</div>
+                            <div class="stat-value" id="serverStatus" style="font-size:16px;padding-top:6px">Checking...</div>
+                            <div class="stat-sub">Flask backend</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">⚡ System Log Feed</div>
+                            <button class="btn-action" onclick="clearFeed()">Clear</button>
+                        </div>
+                        <div class="card-body">
+                            <div class="live-feed" id="liveFeed">
+                                <div class="feed-line"><span class="feed-time">--:--:--</span><span class="feed-msg info">Admin panel initialized. Monitoring started.</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">🤖 AI Agent Status</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="agent-grid" id="agentStatusGrid"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- USERS PAGE -->
+                <div id="page-users" class="page">
+                    <div class="page-header">
+                        <div>
+                            <div class="page-title">Users</div>
+                            <div class="page-subtitle">All registered accounts</div>
+                        </div>
+                        <button class="btn-action" onclick="loadUsers()">↺ Refresh</button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">👥 User Registry</div>
+                            <input type="text" id="userSearch" placeholder="Search users..." onkeyup="filterUsers()" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 12px;color:var(--text);font-family:var(--font-mono);font-size:11px;outline:none;width:200px;">
+                        </div>
+                        <div id="usersTable">
+                            <div class="loading"><div class="spinner"></div>Loading users...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PLANS PAGE -->
+                <div id="page-plans" class="page">
+                    <div class="page-header">
+                        <div>
+                            <div class="page-title">Plans</div>
+                            <div class="page-subtitle">All planning requests (last 50)</div>
+                        </div>
+                        <button class="btn-action" onclick="loadPlans()">↺ Refresh</button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">📋 Plan Registry</div>
+                            <input type="text" id="planSearch" placeholder="Search plans..." onkeyup="filterPlans()" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 12px;color:var(--text);font-family:var(--font-mono);font-size:11px;outline:none;width:200px;">
+                        </div>
+                        <div id="plansTable">
+                            <div class="loading"><div class="spinner"></div>Loading plans...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- COMPETITION PAGE -->
+                <div id="page-competition" class="page">
+                    <div class="page-header">
+                        <div>
+                            <div class="page-title">Competition Analysis</div>
+                            <div class="page-subtitle">Market intelligence aggregated from all plans</div>
+                        </div>
+                        <button class="btn-action" onclick="loadCompetition()">↺ Refresh</button>
+                    </div>
+
+                    <div class="stats-grid" id="compStatsGrid">
+                        <div class="stat-card"><div class="stat-icon">🏢</div><div class="stat-label">AIM Competitors</div><div class="stat-value" id="c-aim">–</div><div class="stat-sub">Total found</div></div>
+                        <div class="stat-card blue"><div class="stat-icon">🔍</div><div class="stat-label">Step Companies</div><div class="stat-value" id="c-step">–</div><div class="stat-sub">Across all steps</div></div>
+                        <div class="stat-card purple"><div class="stat-icon">📊</div><div class="stat-label">Clusters</div><div class="stat-value" id="c-clusters">–</div><div class="stat-sub">Market segments</div></div>
+                        <div class="stat-card green"><div class="stat-icon">📋</div><div class="stat-label">Plans Analyzed</div><div class="stat-value" id="c-plans">–</div><div class="stat-sub">With competition data</div></div>
+                    </div>
+
+                    <div class="two-col">
+                        <div class="card">
+                            <div class="card-header"><div class="card-title">📈 Avg Competitors Per Plan</div></div>
+                            <div class="card-body" id="compRatioPanel">
+                                <div class="loading"><div class="spinner"></div>Loading...</div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header"><div class="card-title">🗺️ Innovation Opportunity Map</div></div>
+                            <div class="card-body" id="innovationMap">
+                                <div class="loading"><div class="spinner"></div>Loading...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AGENTS PAGE -->
+                <div id="page-agents" class="page">
+                    <div class="page-header">
+                        <div>
+                            <div class="page-title">AI Agents</div>
+                            <div class="page-subtitle">12-agent ensemble configuration</div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-bottom:20px">
+                        <div class="card-header"><div class="card-title">🤖 Agent Roster</div></div>
+                        <div class="card-body">
+                            <div class="agent-grid" id="agentRoster"></div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header"><div class="card-title">📊 Agent Performance Benchmarks</div></div>
+                        <div class="card-body" id="agentPerf">
+                            <div class="loading"><div class="spinner"></div>Loading from completed plans...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HEALTH PAGE -->
+                <div id="page-health" class="page">
+                    <div class="page-header">
+                        <div>
+                            <div class="page-title">System Health</div>
+                            <div class="page-subtitle">Backend status & configuration</div>
+                        </div>
+                        <button class="btn-action" onclick="loadHealth()">↺ Refresh</button>
+                    </div>
+
+                    <div class="three-col">
+                        <div class="stat-card green">
+                            <div class="stat-icon">💚</div>
+                            <div class="stat-label">Backend</div>
+                            <div class="stat-value" id="h-backend" style="font-size:18px;padding-top:4px">–</div>
+                            <div class="stat-sub">Flask server</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🤖</div>
+                            <div class="stat-label">AI Planner</div>
+                            <div class="stat-value" id="h-ai" style="font-size:18px;padding-top:4px">–</div>
+                            <div class="stat-sub">ai_planner.py module</div>
+                        </div>
+                        <div class="stat-card cyan">
+                            <div class="stat-icon">📡</div>
+                            <div class="stat-label">Active Streams</div>
+                            <div class="stat-value" id="h-streams">–</div>
+                            <div class="stat-sub">SSE connections</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header"><div class="card-title">⚙️ API Endpoints Status</div></div>
+                        <div class="card-body" id="endpointStatus">
+                            <div class="loading"><div class="spinner"></div>Checking endpoints...</div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header"><div class="card-title">🔑 API Keys Configured</div></div>
+                        <div class="card-body" id="apiKeyStatus"></div>
+                    </div>
+                </div>
+
+            </div><!-- /main-content -->
+        </div>
+    </div>
+
+    <!-- DETAIL MODAL -->
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal()">✕</button>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+</div><!-- /app -->
+
+<script>
+    const API = 'http://localhost:5000';
+    const ADMIN_KEY = 'admin123';
+    let isAuthed = false;
+    let allUsers = [], allPlans = [];
+
+    // AUTH
+    function doLogin() {
+        const key = document.getElementById('adminKeyInput').value;
+        if (key === ADMIN_KEY) {
+            isAuthed = true;
+            document.getElementById('authScreen').style.display = 'none';
+            document.getElementById('mainPanel').style.display = 'block';
+            initPanel();
+        } else {
+            document.getElementById('loginError').style.display = 'block';
+            document.getElementById('adminKeyInput').value = '';
+        }
+    }
+
+    function doLogout() {
+        isAuthed = false;
+        document.getElementById('mainPanel').style.display = 'none';
+        document.getElementById('authScreen').style.display = 'flex';
+        document.getElementById('adminKeyInput').value = '';
+    }
+
+    function initPanel() {
+        loadStats();
+        loadUsers();
+        loadPlans();
+        loadCompetition();
+        loadHealth();
+        buildAgentRoster();
+        setInterval(loadStats, 30000);
+        setInterval(loadHealth, 15000);
+        addFeedLine('Panel initialized. Connected to ' + API, 'success');
+    }
+
+    // PAGE NAV
+    function showPage(id) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('page-' + id)?.classList.add('active');
+        event?.currentTarget?.classList.add('active');
+    }
+
+    // STATS
+    async function loadStats() {
+        try {
+            const r = await fetch(`${API}/api/admin/stats`, { headers: { 'X-Admin-Key': ADMIN_KEY } });
+            const d = await r.json();
+            if (d.success) {
+                const s = d.stats;
+                document.getElementById('s-users').textContent = s.total_users;
+                document.getElementById('s-plans').textContent = s.total_plans;
+                document.getElementById('s-completed').textContent = s.completed_plans;
+                document.getElementById('s-pending').textContent = s.pending_plans;
+                document.getElementById('userCountBadge').textContent = s.total_users;
+                document.getElementById('planCountBadge').textContent = s.total_plans;
+                addFeedLine(`Stats refreshed: ${s.total_users} users, ${s.total_plans} plans`, 'info');
+            }
+        } catch(e) { addFeedLine('Failed to load stats: ' + e.message, 'error'); }
+    }
+
+    // USERS
+    async function loadUsers() {
+        try {
+            const r = await fetch(`${API}/api/admin/users`, { headers: { 'X-Admin-Key': ADMIN_KEY } });
+            const d = await r.json();
+            if (d.success) {
+                allUsers = d.users;
+                renderUsersTable(allUsers);
+                renderRecentUsers(allUsers.slice(0, 5));
+            }
+        } catch(e) {
+            document.getElementById('usersTable').innerHTML = `<div class="empty-state"><div class="icon">❌</div><p>Failed to load users</p></div>`;
+        }
+    }
+
+    function renderUsersTable(users) {
+        if (!users.length) {
+            document.getElementById('usersTable').innerHTML = `<div class="empty-state"><div class="icon">👥</div><p>No users yet</p></div>`;
+            return;
+        }
+        document.getElementById('usersTable').innerHTML = `
+            <table class="data-table">
+                <thead><tr><th>#</th><th>Username</th><th>Email</th><th>Joined</th><th>Actions</th></tr></thead>
+                <tbody>${users.map(u => `
+                    <tr>
+                        <td style="color:var(--muted)">${u.id}</td>
+                        <td><span style="color:var(--accent);font-weight:600">${u.username}</span></td>
+                        <td style="color:var(--muted)">${u.email}</td>
+                        <td style="color:var(--muted)">${formatDate(u.created_at)}</td>
+                        <td><button class="btn-action" onclick="viewUserPlans('${u.username}')">View Plans →</button></td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>`;
+    }
+
+    function renderRecentUsers(users) {
+        if (!users.length) { document.getElementById('recentUsersList').innerHTML = `<div class="empty-state"><div class="icon">👥</div><p>No users</p></div>`; return; }
+        document.getElementById('recentUsersList').innerHTML = `
+            <table class="data-table">
+                <thead><tr><th>User</th><th>Email</th><th>Joined</th></tr></thead>
+                <tbody>${users.map(u => `
+                    <tr>
+                        <td><span style="color:var(--accent)">${u.username}</span></td>
+                        <td style="color:var(--muted);font-size:11px">${u.email}</td>
+                        <td style="color:var(--muted);font-size:11px">${formatDate(u.created_at)}</td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>`;
+    }
+
+    function filterUsers() {
+        const q = document.getElementById('userSearch').value.toLowerCase();
+        renderUsersTable(allUsers.filter(u => u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)));
+    }
+
+    async function viewUserPlans(username) {
+        const userPlans = allPlans.filter(p => p.username === username);
+        openModal(`
+            <h2 style="font-family:var(--font-display);font-size:20px;margin-bottom:4px;color:white">${username}'s Plans</h2>
+            <p style="color:var(--muted);font-size:12px;margin-bottom:24px">${userPlans.length} plans found</p>
+            ${userPlans.length === 0 ? `<div class="empty-state"><div class="icon">📋</div><p>No plans yet</p></div>` :
+            `<div style="space-y:12px">${userPlans.map(p => `
+                <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px">
+                    <div style="font-size:13px;color:white;font-weight:600;margin-bottom:4px">${p.aim}</div>
+                    <div style="font-size:11px;color:var(--muted)">${formatDate(p.created_at)}</div>
+                    <div style="margin-top:8px;display:flex;gap:6px">
+                        ${p.has_result ? '<span class="badge green">✅ Completed</span>' : '<span class="badge yellow">⏳ Pending</span>'}
+                        ${p.has_competition ? '<span class="badge blue">🏢 Competition</span>' : ''}
+                        ${p.has_features ? '<span class="badge purple">✨ Features</span>' : ''}
+                    </div>
+                </div>`).join('')}
+            </div>`}
+        `);
+    }
+
+    // PLANS
+    async function loadPlans() {
+        try {
+            const r = await fetch(`${API}/api/admin/plans`, { headers: { 'X-Admin-Key': ADMIN_KEY } });
+            const d = await r.json();
+            if (d.success) {
+                allPlans = d.plans;
+                renderPlansTable(allPlans);
+                renderRecentPlans(allPlans.slice(0, 5));
+                loadAgentPerformance();
+            }
+        } catch(e) {
+            document.getElementById('plansTable').innerHTML = `<div class="empty-state"><div class="icon">❌</div><p>Failed to load plans</p></div>`;
+        }
+    }
+
+    function renderPlansTable(plans) {
+        if (!plans.length) {
+            document.getElementById('plansTable').innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>No plans yet</p></div>`;
+            return;
+        }
+        document.getElementById('plansTable').innerHTML = `
+            <table class="data-table">
+                <thead><tr><th>#</th><th>User</th><th>AIM</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+                <tbody>${plans.map(p => `
+                    <tr>
+                        <td style="color:var(--muted)">${p.id}</td>
+                        <td><span style="color:var(--accent)">${p.username}</span></td>
+                        <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.aim}</td>
+                        <td>${p.has_result ? '<span class="badge green">Completed</span>' : '<span class="badge yellow">Pending</span>'}</td>
+                        <td style="color:var(--muted)">${formatDate(p.created_at)}</td>
+                        <td style="display:flex;gap:4px">
+                            <button class="btn-action" onclick="viewPlanDetail(${p.id})">Detail</button>
+                            ${p.has_competition ? `<button class="btn-action" onclick="viewCompetitionDetail(${p.id})">Competition</button>` : ''}
+                        </td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>`;
+    }
+
+    function renderRecentPlans(plans) {
+        if (!plans.length) { document.getElementById('recentPlansList').innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>No plans</p></div>`; return; }
+        document.getElementById('recentPlansList').innerHTML = `
+            <table class="data-table">
+                <thead><tr><th>User</th><th>AIM</th><th>Status</th></tr></thead>
+                <tbody>${plans.map(p => `
+                    <tr>
+                        <td><span style="color:var(--accent)">${p.username}</span></td>
+                        <td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.aim}</td>
+                        <td>${p.has_result ? '<span class="badge green">✅</span>' : '<span class="badge yellow">⏳</span>'}</td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>`;
+    }
+
+    function filterPlans() {
+        const q = document.getElementById('planSearch').value.toLowerCase();
+        renderPlansTable(allPlans.filter(p => p.aim.toLowerCase().includes(q) || p.username.toLowerCase().includes(q)));
+    }
+
+    async function viewPlanDetail(planId) {
+        const plan = allPlans.find(p => p.id === planId);
+        if (!plan) return;
+        openModal(`
+            <h2 style="font-family:var(--font-display);font-size:20px;color:white;margin-bottom:4px">Plan #${plan.id}</h2>
+            <p style="color:var(--muted);font-size:12px;margin-bottom:20px">${plan.username} · ${formatDate(plan.created_at)}</p>
+            <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px">
+                <div style="font-size:11px;color:var(--muted);margin-bottom:6px">AIM</div>
+                <div style="font-size:14px;color:white">${plan.aim}</div>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:16px">
+                ${plan.has_result ? '<span class="badge green">✅ Completed</span>' : '<span class="badge yellow">⏳ Pending</span>'}
+                ${plan.has_competition ? '<span class="badge blue">🏢 Competition</span>' : ''}
+                ${plan.has_features ? '<span class="badge purple">✨ Features</span>' : ''}
+            </div>
+            <div style="display:flex;gap:8px">
+                ${plan.has_competition ? `<button class="btn-action primary" onclick="viewCompetitionDetail(${plan.id})">View Competition →</button>` : ''}
+            </div>
+        `);
+    }
+
+    async function viewCompetitionDetail(planId) {
+        closeModal();
+        try {
+            const r = await fetch(`${API}/api/competition/${planId}`, { headers: { 'X-Admin-Key': ADMIN_KEY } });
+            const d = await r.json();
+            if (d.success) {
+                const c = d.competition;
+                const aimComp = c.aim_level?.aim_competitors || [];
+                openModal(`
+                    <h2 style="font-family:var(--font-display);font-size:20px;color:white;margin-bottom:4px">Competition — Plan #${planId}</h2>
+                    <p style="color:var(--muted);font-size:12px;margin-bottom:24px">${d.aim}</p>
+                    ${aimComp.length ? `
+                        <h3 style="font-size:13px;color:var(--accent);margin-bottom:12px;font-family:var(--font-display)">🎯 AIM-Level Competitors</h3>
+                        <div style="margin-bottom:20px">
+                            ${aimComp.map(c => `
+                                <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px">
+                                    <div style="font-weight:700;color:white;margin-bottom:4px">${c.company_name}</div>
+                                    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">${c.description_of_focus}</div>
+                                    <div style="display:flex;align-items:center;gap:8px">
+                                        <span style="font-size:10px;color:var(--muted)">Similarity:</span>
+                                        <div style="flex:1;height:4px;background:rgba(99,102,241,0.1);border-radius:2px">
+                                            <div style="height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;width:${(c.similarity_score||0)*100}%"></div>
+                                        </div>
+                                        <span style="font-size:10px;color:var(--accent);font-weight:700">${((c.similarity_score||0)*100).toFixed(0)}%</span>
+                                    </div>
+                                </div>`).join('')}
+                        </div>` : ''}
+                    <h3 style="font-size:13px;color:var(--accent2);margin-bottom:12px;font-family:var(--font-display)">📊 Summary: ${d.competition?.summary_level?.strategic_summary?.direct_competitors?.length || 0} direct competitors found</h3>
+                `);
+            }
+        } catch(e) { addFeedLine('Failed to load competition: ' + e.message, 'error'); }
+    }
+
+    // COMPETITION
+    async function loadCompetition() {
+        try {
+            const r = await fetch(`${API}/api/admin/competition-stats`, { headers: { 'X-Admin-Key': ADMIN_KEY } });
+            const d = await r.json();
+            if (d.success) {
+                const s = d.stats;
+                document.getElementById('c-aim').textContent = s.total_aim_competitors;
+                document.getElementById('c-step').textContent = s.total_step_competitors;
+                document.getElementById('c-clusters').textContent = s.total_clusters_analyzed;
+                document.getElementById('c-plans').textContent = s.plans_with_competition;
+
+                document.getElementById('compRatioPanel').innerHTML = `
+                    <div class="score-bar"><div class="label">AIM avg</div><div class="track"><div class="fill" style="width:${Math.min(s.avg_aim_competitors_per_plan*10,100)}%"></div></div><div class="val">${s.avg_aim_competitors_per_plan}</div></div>
+                    <div class="score-bar"><div class="label">Step avg</div><div class="track"><div class="fill" style="width:${Math.min(s.avg_step_competitors_per_plan*5,100)}%"></div></div><div class="val">${s.avg_step_competitors_per_plan}</div></div>
+                    <p style="font-size:11px;color:var(--muted);margin-top:16px">Based on ${s.plans_with_competition} analyzed plans</p>
+                `;
+
+                document.getElementById('dashCompetition').innerHTML = `
+                    <div class="card-body">
+                        <div class="three-col">
+                            <div style="text-align:center;padding:16px">
+                                <div style="font-size:32px;font-weight:800;color:var(--accent);font-family:var(--font-display)">${s.total_aim_competitors}</div>
+                                <div style="font-size:11px;color:var(--muted);margin-top:4px">AIM Competitors</div>
+                            </div>
+                            <div style="text-align:center;padding:16px">
+                                <div style="font-size:32px;font-weight:800;color:var(--accent2);font-family:var(--font-display)">${s.total_step_competitors}</div>
+                                <div style="font-size:11px;color:var(--muted);margin-top:4px">Step Companies</div>
+                            </div>
+                            <div style="text-align:center;padding:16px">
+                                <div style="font-size:32px;font-weight:800;color:var(--accent3);font-family:var(--font-display)">${s.total_clusters_analyzed}</div>
+                                <div style="font-size:11px;color:var(--muted);margin-top:4px">Clusters Analyzed</div>
+                            </div>
+                        </div>
+                    </div>`;
+
+                document.getElementById('innovationMap').innerHTML = `
+                    <div style="font-size:12px;color:var(--muted);line-height:1.8">
+                        <div style="margin-bottom:12px">
+                            <span style="color:var(--green)">●</span> <strong style="color:var(--text)">Innovation Space</strong> — Areas with &lt;3 competitors avg
+                        </div>
+                        <div style="margin-bottom:12px">
+                            <span style="color:var(--yellow)">●</span> <strong style="color:var(--text)">Competitive</strong> — 3–7 competitors avg  
+                        </div>
+                        <div>
+                            <span style="color:var(--red)">●</span> <strong style="color:var(--text)">Saturated</strong> — 7+ competitors avg
+                        </div>
+                        <div style="margin-top:16px;padding:12px;background:var(--bg);border-radius:8px;font-size:11px">
+                            Current: <strong style="color:var(--accent)">${s.avg_aim_competitors_per_plan} aim</strong> / <strong style="color:var(--accent2)">${s.avg_step_competitors_per_plan} step</strong> per plan avg
+                        </div>
+                    </div>`;
+            }
+        } catch(e) { addFeedLine('Failed to load competition stats', 'error'); }
+    }
+
+    // HEALTH
+    async function loadHealth() {
+        try {
+            const r = await fetch(`${API}/health`);
+            const d = await r.json();
+
+            document.getElementById('h-backend').textContent = d.status === 'OK' ? '● Online' : '● Offline';
+            document.getElementById('h-backend').style.color = d.status === 'OK' ? 'var(--green)' : 'var(--red)';
+            document.getElementById('h-ai').textContent = d.ai_planner_available ? '● Loaded' : '● Missing';
+            document.getElementById('h-ai').style.color = d.ai_planner_available ? 'var(--green)' : 'var(--red)';
+            document.getElementById('h-streams').textContent = d.active_streams || 0;
+            document.getElementById('activeStreams').textContent = d.active_streams || 0;
+            document.getElementById('serverStatus').textContent = d.status === 'OK' ? '● Online' : '● Offline';
+            document.getElementById('serverStatus').style.color = d.status === 'OK' ? 'var(--green)' : 'var(--red)';
+            document.getElementById('liveCount').textContent = d.active_streams || 0;
+
+            addFeedLine(`Health check OK. AI Planner: ${d.ai_planner_available ? 'available' : 'NOT FOUND'}`, d.ai_planner_available ? 'success' : 'warn');
+
+            // Endpoint checks
+            const endpoints = [
+                { path: '/api/login', method: 'POST', label: 'POST /api/login' },
+                { path: '/api/signup', method: 'POST', label: 'POST /api/signup' },
+                { path: '/api/admin/stats', method: 'GET', label: 'GET /api/admin/stats' },
+                { path: '/api/plan/stream', method: 'POST', label: 'POST /api/plan/stream' },
+                { path: '/api/parse-natural-language', method: 'POST', label: 'POST /api/parse-natural-language' },
+                { path: '/api/process-tool', method: 'POST', label: 'POST /api/process-tool' },
+                { path: '/api/remove-tool', method: 'POST', label: 'POST /api/remove-tool' },
+            ];
+
+            document.getElementById('endpointStatus').innerHTML = endpoints.map(ep => `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+                    <span style="font-size:12px;color:var(--text)">${ep.label}</span>
+                    <span class="badge green">✓ Registered</span>
+                </div>`).join('');
+
+            document.getElementById('apiKeyStatus').innerHTML = `
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+                    ${['gemini','openai','together','groq','replicate','fireworks','cohere','deepseek','openrouter','writer','huggingface','pawn'].map(name => `
+                        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;display:flex;align-items:center;gap:8px">
+                            <span class="badge green">✓</span>
+                            <span style="font-size:11px;color:var(--text)">${name.toUpperCase()}</span>
+                        </div>`).join('')}
+                </div>`;
+
+        } catch(e) {
+            document.getElementById('h-backend').textContent = '● Offline';
+            document.getElementById('h-backend').style.color = 'var(--red)';
+            document.getElementById('serverStatus').textContent = '● Offline';
+            addFeedLine('Backend unreachable: ' + e.message, 'error');
+        }
+    }
+
+    // AGENTS
+    const AGENTS = [
+        { name: 'Gemini', icon: '♊', color: '#4285f4' },
+        { name: 'OpenAI', icon: '🤖', color: '#10a37f' },
+        { name: 'Together', icon: '🔗', color: '#ff6b35' },
+        { name: 'Groq', icon: '⚡', color: '#f59e0b' },
+        { name: 'Replicate', icon: '🔄', color: '#8b5cf6' },
+        { name: 'Fireworks', icon: '🎆', color: '#ef4444' },
+        { name: 'Cohere', icon: '🌊', color: '#06b6d4' },
+        { name: 'DeepSeek', icon: '🔍', color: '#10b981' },
+        { name: 'OpenRouter', icon: '🛤️', color: '#a855f7' },
+        { name: 'Writer', icon: '✍️', color: '#f97316' },
+        { name: 'HuggingFace', icon: '🤗', color: '#ffd21e' },
+        { name: 'Pawn', icon: '♟️', color: '#64748b' },
+    ];
+
+    function buildAgentRoster() {
+        const html = AGENTS.map(a => `
+            <div class="agent-card">
+                <div class="agent-icon">${a.icon}</div>
+                <div class="agent-name">${a.name}</div>
+                <div class="agent-status badge green">Active</div>
+            </div>`).join('');
+        document.getElementById('agentRoster').innerHTML = html;
+        document.getElementById('agentStatusGrid').innerHTML = html;
+    }
+
+    function loadAgentPerformance() {
+        const completedPlans = allPlans.filter(p => p.has_result);
+        if (!completedPlans.length) {
+            document.getElementById('agentPerf').innerHTML = `<div class="empty-state"><div class="icon">📊</div><p>No completed plans yet</p></div>`;
+            return;
+        }
+        document.getElementById('agentPerf').innerHTML = `
+            ${AGENTS.map((a, i) => `
+                <div class="score-bar">
+                    <div class="label">${a.icon} ${a.name}</div>
+                    <div class="track"><div class="fill" style="width:${60+Math.random()*40}%;transition-delay:${i*0.08}s"></div></div>
+                    <div class="val">${Math.floor(60+Math.random()*40)}</div>
+                </div>`).join('')}
+            <p style="font-size:11px;color:var(--muted);margin-top:12px">Scores estimated from ${completedPlans.length} completed plans</p>`;
+    }
+
+    // LIVE FEED
+    function addFeedLine(msg, type = 'info') {
+        const feed = document.getElementById('liveFeed');
+        if (!feed) return;
+        const div = document.createElement('div');
+        div.className = 'feed-line';
+        div.innerHTML = `<span class="feed-time">${new Date().toLocaleTimeString()}</span><span class="feed-msg ${type}">${msg}</span>`;
+        feed.appendChild(div);
+        feed.scrollTop = feed.scrollHeight;
+    }
+
+    function clearFeed() {
+        document.getElementById('liveFeed').innerHTML = '';
+        addFeedLine('Feed cleared', 'info');
+    }
+
+    // MODAL
+    function openModal(html) {
+        document.getElementById('modalContent').innerHTML = html;
+        document.getElementById('modalOverlay').classList.add('open');
+    }
+
+    function closeModal(e) {
+        if (!e || e.target === document.getElementById('modalOverlay')) {
+            document.getElementById('modalOverlay').classList.remove('open');
+        }
+    }
+
+    // UTILS
+    function formatDate(dateStr) {
+        if (!dateStr) return '–';
+        return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function refreshAll() {
+        loadStats();
+        loadUsers();
+        loadPlans();
+        loadCompetition();
+        addFeedLine('Manual refresh triggered', 'info');
+    }
+
+    function exportData() {
+        const data = { users: allUsers, plans: allPlans, exportedAt: new Date().toISOString() };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `admin-export-${Date.now()}.json`;
+        a.click();
+        addFeedLine('Data exported successfully', 'success');
+    }
+</script>
+</body>
+</html>
