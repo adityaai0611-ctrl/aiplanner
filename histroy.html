@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Planner — History</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050812;
+            --surface: #0a0f1e;
+            --surface2: #0f1629;
+            --border: rgba(139,92,246,0.12);
+            --accent: #8b5cf6;
+            --accent2: #ec4899;
+            --accent3: #06b6d4;
+            --green: #10b981;
+            --red: #ef4444;
+            --yellow: #f59e0b;
+            --text: #e2e8f0;
+            --muted: #64748b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 20% 10%, rgba(139,92,246,0.07) 0%, transparent 50%),
+                radial-gradient(ellipse 60% 50% at 80% 90%, rgba(236,72,153,0.05) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        /* TOP NAV */
+        .topnav {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: rgba(5,8,18,0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 60px;
+        }
+
+        .nav-left { display: flex; align-items: center; gap: 24px; }
+        .nav-logo {
+            font-family: 'DM Mono', monospace;
+            font-weight: 500;
+            font-size: 15px;
+            color: white;
+            display: flex; align-items: center; gap: 10px;
+            text-decoration: none;
+        }
+        .nav-logo .dot {
+            width: 8px; height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--accent);
+        }
+
+        .nav-tabs { display: flex; gap: 4px; }
+        .nav-tab {
+            padding: 6px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--muted);
+            cursor: pointer;
+            transition: all 0.15s;
+            text-decoration: none;
+        }
+        .nav-tab:hover { color: var(--text); background: rgba(139,92,246,0.08); }
+        .nav-tab.active { color: var(--accent); background: rgba(139,92,246,0.12); }
+
+        .nav-right { display: flex; align-items: center; gap: 12px; }
+        .user-chip {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 12px;
+            background: rgba(139,92,246,0.1);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 13px;
+            color: var(--text);
+        }
+        .user-chip .avatar {
+            width: 24px; height: 24px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px;
+        }
+
+        .btn-sm {
+            padding: 7px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--muted);
+        }
+        .btn-outline:hover { border-color: var(--accent); color: var(--text); }
+        .btn-accent { background: var(--accent); color: white; box-shadow: 0 0 20px rgba(139,92,246,0.3); }
+        .btn-accent:hover { background: #7c3aed; transform: translateY(-1px); }
+
+        /* MAIN */
+        .main { padding: 40px 32px; max-width: 1280px; margin: 0 auto; position: relative; z-index: 1; }
+
+        /* HEADER */
+        .history-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .history-title {
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: -1px;
+            color: white;
+            line-height: 1;
+        }
+        .history-sub { font-size: 14px; color: var(--muted); margin-top: 6px; }
+
+        /* FILTERS */
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .filter-search {
+            flex: 1;
+            min-width: 240px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 16px;
+            color: var(--text);
+            font-family: 'DM Mono', monospace;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .filter-search:focus { border-color: var(--accent); }
+        .filter-search::placeholder { color: var(--muted); }
+
+        .filter-chip {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--muted);
+        }
+        .filter-chip:hover { border-color: var(--accent); color: var(--text); }
+        .filter-chip.active { background: rgba(139,92,246,0.15); border-color: var(--accent); color: var(--accent); }
+
+        /* EMPTY/LOADING */
+        .state-box {
+            text-align: center;
+            padding: 80px 20px;
+            border: 1px dashed var(--border);
+            border-radius: 16px;
+        }
+        .state-box .icon { font-size: 56px; margin-bottom: 16px; opacity: 0.4; }
+        .state-box h3 { font-size: 20px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+        .state-box p { font-size: 14px; color: var(--muted); max-width: 360px; margin: 0 auto 24px; }
+
+        .spinner-wrap { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 80px; color: var(--muted); font-size: 14px; }
+        .spinner { width: 24px; height: 24px; border: 2px solid rgba(139,92,246,0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* PLAN GRID */
+        .plan-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 16px;
+        }
+
+        /* PLAN CARD */
+        .plan-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .plan-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .plan-card:hover { border-color: rgba(139,92,246,0.3); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(139,92,246,0.08); }
+        .plan-card:hover::before { opacity: 1; }
+
+        .plan-card.completed::before { opacity: 0.6; }
+        .plan-card.pending { opacity: 0.7; }
+
+        .card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .card-num {
+            width: 32px; height: 32px;
+            background: rgba(139,92,246,0.1);
+            border: 1px solid rgba(139,92,246,0.2);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'DM Mono', monospace;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--accent);
+            flex-shrink: 0;
+        }
+
+        .card-badges { display: flex; gap: 4px; flex-wrap: wrap; }
+        .badge {
+            display: inline-flex; align-items: center; gap: 3px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        .badge.green { background: rgba(16,185,129,0.12); color: var(--green); }
+        .badge.yellow { background: rgba(245,158,11,0.12); color: var(--yellow); }
+        .badge.blue { background: rgba(6,182,212,0.12); color: var(--accent3); }
+        .badge.purple { background: rgba(139,92,246,0.12); color: var(--accent); }
+        .badge.pink { background: rgba(236,72,153,0.12); color: var(--accent2); }
+
+        .card-aim {
+            font-size: 15px;
+            font-weight: 600;
+            color: white;
+            line-height: 1.4;
+            margin-bottom: 10px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 14px;
+        }
+        .card-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--muted);
+        }
+        .card-step .step-num { color: var(--accent); font-family: 'DM Mono', monospace; flex-shrink: 0; font-size: 11px; }
+
+        .card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+        .card-date { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+        .card-arrow { font-size: 16px; color: var(--accent); opacity: 0; transition: opacity 0.2s; }
+        .plan-card:hover .card-arrow { opacity: 1; }
+
+        /* DETAIL DRAWER */
+        .drawer-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(5,8,18,0.7);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .drawer-overlay.open { opacity: 1; pointer-events: auto; }
+
+        .drawer {
+            position: fixed;
+            right: 0; top: 0; bottom: 0;
+            width: 640px;
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            z-index: 101;
+            transform: translateX(100%);
+            transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+            overflow-y: auto;
+        }
+        .drawer.open { transform: translateX(0); }
+
+        .drawer-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            background: var(--surface);
+            z-index: 10;
+        }
+        .drawer-title { font-size: 20px; font-weight: 700; color: white; letter-spacing: -0.5px; }
+        .drawer-sub { font-size: 12px; color: var(--muted); margin-top: 4px; font-family: 'DM Mono', monospace; }
+        .drawer-close {
+            background: rgba(139,92,246,0.1);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .drawer-close:hover { color: var(--text); }
+
+        .drawer-body { padding: 24px; }
+
+        /* TABS */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            background: var(--bg);
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 20px;
+        }
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 8px 12px;
+            border-radius: 7px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            color: var(--muted);
+        }
+        .tab.active { background: var(--surface2); color: var(--text); }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* DETAIL SECTIONS */
+        .section { margin-bottom: 20px; }
+        .section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 10px; }
+
+        .aim-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            border-radius: 10px;
+            padding: 16px;
+            font-size: 15px;
+            font-weight: 500;
+            color: white;
+            line-height: 1.5;
+        }
+
+        .step-list { display: flex; flex-direction: column; gap: 8px; }
+        .step-item {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            padding: 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            animation: slideUp 0.3s ease both;
+        }
+        @keyframes slideUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+        .step-num-badge {
+            width: 28px; height: 28px;
+            background: rgba(139,92,246,0.15);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent);
+            flex-shrink: 0;
+        }
+        .step-text { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+        /* AGENT RESULTS */
+        .agent-result {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 10px;
+            transition: border-color 0.2s;
+        }
+        .agent-result.winner { border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.04); }
+        .agent-result-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .agent-name-tag { font-size: 13px; font-weight: 700; color: var(--text); }
+        .score-ring {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            border: 2px solid rgba(139,92,246,0.3);
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'DM Mono', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .score-ring.high { border-color: var(--green); color: var(--green); }
+        .score-ring.mid { border-color: var(--yellow); color: var(--yellow); }
+
+        .progress-track { height: 4px; background: rgba(139,92,246,0.1); border-radius: 2px; overflow: hidden; margin-bottom: 8px; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 2px; transition: width 0.8s ease; }
+
+        .improvement-chain { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
+        .chain-score {
+            padding: 3px 8px;
+            background: rgba(139,92,246,0.1);
+            border-radius: 6px;
+            font-size: 10px;
+            font-family: 'DM Mono', monospace;
+            color: var(--muted);
+        }
+        .chain-score.best { background: rgba(16,185,129,0.15); color: var(--green); }
+        .chain-arrow { color: var(--muted); font-size: 10px; }
+
+        /* COMPETITION SECTION */
+        .comp-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 10px;
+        }
+        .comp-company { font-size: 14px; font-weight: 600; color: white; margin-bottom: 4px; }
+        .comp-desc { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
+        .similarity-row { display: flex; align-items: center; gap: 8px; }
+        .sim-bar { flex: 1; height: 4px; background: rgba(139,92,246,0.1); border-radius: 2px; }
+        .sim-fill { height: 100%; background: linear-gradient(90deg, var(--green), var(--yellow), var(--red)); border-radius: 2px; }
+        .sim-val { font-size: 11px; font-weight: 700; color: var(--accent); font-family: 'DM Mono', monospace; width: 32px; text-align: right; }
+
+        /* FEATURE TAGS */
+        .feature-cloud { display: flex; flex-wrap: wrap; gap: 6px; }
+        .feature-tag {
+            padding: 4px 10px;
+            background: rgba(236,72,153,0.08);
+            border: 1px solid rgba(236,72,153,0.2);
+            border-radius: 20px;
+            font-size: 11px;
+            color: var(--accent2);
+        }
+
+        /* STATS ROW */
+        .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+        .mini-stat {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+        }
+        .mini-stat-val { font-size: 24px; font-weight: 700; color: var(--accent); font-family: 'DM Mono', monospace; }
+        .mini-stat-label { font-size: 10px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+
+        @media (max-width: 768px) {
+            .main { padding: 20px 16px; }
+            .plan-grid { grid-template-columns: 1fr; }
+            .drawer { width: 100%; }
+            .topnav { padding: 0 16px; }
+            .nav-tabs { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="topnav">
+    <div class="nav-left">
+        <a href="index.html" class="nav-logo">
+            <div class="dot"></div>
+            AI Planner
+        </a>
+        <div class="nav-tabs">
+            <a href="index.html" class="nav-tab">⚡ New Plan</a>
+            <div class="nav-tab active">📋 History</div>
+            <a href="admin.html" class="nav-tab">⚙️ Admin</a>
+        </div>
+    </div>
+    <div class="nav-right">
+        <div class="user-chip">
+            <div class="avatar">👤</div>
+            <span id="navUsername">Loading...</span>
+        </div>
+        <button class="btn-sm btn-outline" onclick="handleLogout()">Sign out</button>
+        <button class="btn-sm btn-accent" onclick="goNewPlan()">+ New Plan</button>
+    </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+    <div class="history-header">
+        <div>
+            <h1 class="history-title">Your Plans</h1>
+            <p class="history-sub" id="plansSubtitle">Loading your planning history...</p>
+        </div>
+        <div style="display:flex;gap:8px">
+            <button class="btn-sm btn-outline" onclick="loadHistory()">↺ Refresh</button>
+            <button class="btn-sm btn-accent" onclick="goNewPlan()">+ New Plan</button>
+        </div>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="filter-bar">
+        <input type="text" class="filter-search" id="searchInput" placeholder="Search your plans..." oninput="filterPlans()">
+        <div class="filter-chip active" id="chip-all" onclick="setFilter('all')">All</div>
+        <div class="filter-chip" id="chip-completed" onclick="setFilter('completed')">✅ Completed</div>
+        <div class="filter-chip" id="chip-pending" onclick="setFilter('pending')">⏳ Pending</div>
+        <div class="filter-chip" id="chip-competition" onclick="setFilter('competition')">🏢 With Competition</div>
+    </div>
+
+    <!-- CONTENT AREA -->
+    <div id="contentArea">
+        <div class="spinner-wrap">
+            <div class="spinner"></div>
+            Loading your plans...
+        </div>
+    </div>
+</div>
+
+<!-- DETAIL DRAWER -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer(event)"></div>
+<div class="drawer" id="planDrawer">
+    <div class="drawer-header">
+        <div>
+            <div class="drawer-title" id="drawerTitle">Plan Details</div>
+            <div class="drawer-sub" id="drawerSub">Loading...</div>
+        </div>
+        <button class="drawer-close" onclick="closeDrawer()">✕</button>
+    </div>
+    <div class="drawer-body">
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('overview')">Overview</div>
+            <div class="tab" onclick="switchTab('results')">Results</div>
+            <div class="tab" onclick="switchTab('competition')">Competition</div>
+            <div class="tab" onclick="switchTab('features')">Features</div>
+        </div>
+        <div id="tab-overview" class="tab-panel active"></div>
+        <div id="tab-results" class="tab-panel"></div>
+        <div id="tab-competition" class="tab-panel"></div>
+        <div id="tab-features" class="tab-panel"></div>
+    </div>
+</div>
+
+<script>
+    const API = 'http://localhost:5000';
+    let currentUser = null;
+    let allPlans = [];
+    let filteredPlans = [];
+    let activeFilter = 'all';
+    let currentPlan = null;
+
+    // INIT
+    function init() {
+        const stored = sessionStorage.getItem('aiPlanner_user') || localStorage.getItem('aiPlanner_user');
+        if (!stored) {
+            // Try to get from URL param
+            const params = new URLSearchParams(window.location.search);
+            const u = params.get('user');
+            if (u) {
+                currentUser = u;
+            } else {
+                // Redirect to main app
+                window.location.href = 'index.html';
+                return;
+            }
+        } else {
+            currentUser = stored;
+        }
+
+        document.getElementById('navUsername').textContent = currentUser;
+        loadHistory();
+    }
+
+    async function loadHistory() {
+        document.getElementById('contentArea').innerHTML = `<div class="spinner-wrap"><div class="spinner"></div>Loading plans...</div>`;
+
+        try {
+            const r = await fetch(`${API}/api/plans/${currentUser}`);
+            const d = await r.json();
+
+            if (d.success) {
+                allPlans = d.plans;
+                document.getElementById('plansSubtitle').textContent = `${allPlans.length} plan${allPlans.length !== 1 ? 's' : ''} · click to view details`;
+                applyFilter();
+            } else {
+                showEmpty('Error loading plans', d.message);
+            }
+        } catch(e) {
+            showEmpty('Cannot connect to server', 'Make sure the backend is running on localhost:5000');
+        }
+    }
+
+    function setFilter(f) {
+        activeFilter = f;
+        document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+        document.getElementById('chip-' + f)?.classList.add('active');
+        applyFilter();
+    }
+
+    function filterPlans() { applyFilter(); }
+
+    function applyFilter() {
+        const q = document.getElementById('searchInput').value.toLowerCase();
+        filteredPlans = allPlans.filter(p => {
+            const matchFilter =
+                activeFilter === 'all' ? true :
+                activeFilter === 'completed' ? !!p.result :
+                activeFilter === 'pending' ? !p.result :
+                activeFilter === 'competition' ? !!p.competition_data :
+                true;
+            const matchSearch = !q || p.aim.toLowerCase().includes(q);
+            return matchFilter && matchSearch;
+        });
+
+        renderPlans(filteredPlans);
+    }
+
+    function renderPlans(plans) {
+        if (!plans.length) {
+            showEmpty('No plans found', 'Try a different filter or create a new plan.');
+            return;
+        }
+
+        document.getElementById('contentArea').innerHTML = `
+            <div class="plan-grid">
+                ${plans.map((p, i) => renderPlanCard(p, i)).join('')}
+            </div>`;
+    }
+
+    function renderPlanCard(plan, index) {
+        const steps = plan.steps ? Object.values(plan.steps) : [];
+        const hasResult = !!plan.result;
+        const hasComp = !!plan.competition_data;
+        const hasFeatures = !!plan.features;
+
+        // Get agent count from result
+        let agentCount = 0;
+        let bestScore = 0;
+        if (plan.result?.agents) {
+            const agents = Object.values(plan.result.agents);
+            agentCount = agents.length;
+            bestScore = Math.max(...agents.map(a => a.average_score || 0));
+        }
+
+        return `
+            <div class="plan-card ${hasResult ? 'completed' : 'pending'}" onclick="openPlan(${plan.id})" style="animation: slideUp 0.35s ease ${index * 0.04}s both">
+                <div class="card-top">
+                    <div class="card-num">#${plan.id}</div>
+                    <div class="card-badges">
+                        ${hasResult ? '<span class="badge green">✅ Done</span>' : '<span class="badge yellow">⏳ Pending</span>'}
+                        ${hasComp ? '<span class="badge blue">🏢</span>' : ''}
+                        ${hasFeatures ? '<span class="badge pink">✨</span>' : ''}
+                        ${agentCount > 0 ? `<span class="badge purple">🤖 ${agentCount}</span>` : ''}
+                    </div>
+                </div>
+
+                <div class="card-aim">${plan.aim}</div>
+
+                <div class="card-steps">
+                    ${steps.slice(0, 3).map((s, i) => `
+                        <div class="card-step">
+                            <span class="step-num">${i+1}.</span>
+                            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s}</span>
+                        </div>`).join('')}
+                    ${steps.length > 3 ? `<div class="card-step" style="color:var(--accent)">+${steps.length - 3} more steps</div>` : ''}
+                </div>
+
+                <div class="card-footer">
+                    <div class="card-date">${formatDate(plan.created_at)}</div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        ${bestScore > 0 ? `<span style="font-size:12px;font-weight:700;color:var(--green);font-family:'DM Mono',monospace">${bestScore.toFixed(0)}</span>` : ''}
+                        <span class="card-arrow">→</span>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    function showEmpty(title, msg) {
+        document.getElementById('contentArea').innerHTML = `
+            <div class="state-box">
+                <div class="icon">📭</div>
+                <h3>${title}</h3>
+                <p>${msg}</p>
+                <button class="btn-sm btn-accent" onclick="goNewPlan()">Create Your First Plan</button>
+            </div>`;
+    }
+
+    // DRAWER
+    function openPlan(planId) {
+        currentPlan = allPlans.find(p => p.id === planId);
+        if (!currentPlan) return;
+
+        document.getElementById('drawerTitle').textContent = truncate(currentPlan.aim, 40);
+        document.getElementById('drawerSub').textContent = `Plan #${planId} · ${formatDate(currentPlan.created_at)}`;
+
+        renderOverviewTab();
+        renderResultsTab();
+        renderCompetitionTab();
+        renderFeaturesTab();
+
+        switchTab('overview');
+
+        document.getElementById('drawerOverlay').classList.add('open');
+        document.getElementById('planDrawer').classList.add('open');
+    }
+
+    function closeDrawer(e) {
+        if (!e || e.target === document.getElementById('drawerOverlay')) {
+            document.getElementById('drawerOverlay').classList.remove('open');
+            document.getElementById('planDrawer').classList.remove('open');
+        }
+    }
+
+    function switchTab(name) {
+        document.querySelectorAll('.tab').forEach((t, i) => {
+            t.classList.toggle('active', t.textContent.toLowerCase().includes(name));
+        });
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        document.getElementById('tab-' + name)?.classList.add('active');
+    }
+
+    function renderOverviewTab() {
+        const p = currentPlan;
+        const steps = p.steps ? Object.entries(p.steps) : [];
+        const hasResult = !!p.result;
+
+        // Stats
+        let agentCount = 0, bestScore = 0, totalImprovements = 0;
+        if (p.result?.agents) {
+            const agents = Object.values(p.result.agents);
+            agentCount = agents.length;
+            bestScore = Math.max(...agents.map(a => a.average_score || 0));
+            totalImprovements = agents.reduce((acc, a) => acc + (a.total_improvements || 0), 0);
+        }
+
+        document.getElementById('tab-overview').innerHTML = `
+            ${hasResult ? `
+                <div class="stats-row">
+                    <div class="mini-stat">
+                        <div class="mini-stat-val">${agentCount}</div>
+                        <div class="mini-stat-label">AI Agents</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-val">${bestScore.toFixed(0)}</div>
+                        <div class="mini-stat-label">Best Score</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="mini-stat-val">${totalImprovements}</div>
+                        <div class="mini-stat-label">Improvements</div>
+                    </div>
+                </div>` : ''}
+
+            <div class="section">
+                <div class="section-label">Main Goal</div>
+                <div class="aim-box">${p.aim}</div>
+            </div>
+
+            <div class="section">
+                <div class="section-label">Initial Steps (${steps.length})</div>
+                <div class="step-list">
+                    ${steps.map(([key, val], i) => `
+                        <div class="step-item" style="animation-delay:${i*0.04}s">
+                            <div class="step-num-badge">${i+1}</div>
+                            <div class="step-text">${val}</div>
+                        </div>`).join('')}
+                </div>
+            </div>
+
+            <div style="display:flex;gap:8px;padding-top:16px;border-top:1px solid var(--border)">
+                <span class="badge ${hasResult ? 'green' : 'yellow'}">${hasResult ? '✅ Completed' : '⏳ Pending'}</span>
+                ${p.competition_data ? '<span class="badge blue">🏢 Competition</span>' : ''}
+                ${p.features ? '<span class="badge pink">✨ Features</span>' : ''}
+            </div>`;
+    }
+
+    function renderResultsTab() {
+        const p = currentPlan;
+        if (!p.result?.agents) {
+            document.getElementById('tab-results').innerHTML = `
+                <div class="state-box" style="padding:40px 20px">
+                    <div class="icon">⏳</div>
+                    <h3>No Results Yet</h3>
+                    <p>This plan hasn't been processed by the AI agents yet.</p>
+                </div>`;
+            return;
+        }
+
+        const agents = Object.entries(p.result.agents);
+        const winner = agents.reduce((best, [k, a]) => (!best || (a.average_score||0) > (best[1].average_score||0)) ? [k,a] : best, null);
+
+        document.getElementById('tab-results').innerHTML = `
+            ${winner ? `
+                <div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.25);border-radius:12px;padding:16px;margin-bottom:20px;display:flex;align-items:center;gap:12px">
+                    <span style="font-size:32px">🏆</span>
+                    <div>
+                        <div style="font-weight:700;color:white;font-size:15px">${winner[1].agent_name?.toUpperCase()} wins!</div>
+                        <div style="font-size:12px;color:var(--muted)">Highest average: ${(winner[1].average_score||0).toFixed(1)}/100</div>
+                    </div>
+                </div>` : ''}
+
+            <div>
+                ${agents.map(([key, agent]) => {
+                    const isWinner = winner && winner[0] === key;
+                    const avg = agent.average_score || 0;
+                    const scores = agent.all_improvement_scores || [];
+                    const scoreClass = avg >= 80 ? 'high' : avg >= 60 ? 'mid' : '';
+                    return `
+                        <div class="agent-result ${isWinner ? 'winner' : ''}">
+                            <div class="agent-result-header">
+                                <div>
+                                    <div class="agent-name-tag">${isWinner ? '🏆 ' : ''}${agent.agent_name?.toUpperCase() || key}</div>
+                                    <div style="font-size:11px;color:var(--muted)">Original: ${agent.original_score} → Final: ${agent.final_score}</div>
+                                </div>
+                                <div class="score-ring ${scoreClass}">${avg.toFixed(0)}</div>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-fill" style="width:${avg}%"></div>
+                            </div>
+                            ${scores.length > 1 ? `
+                                <div class="improvement-chain">
+                                    ${scores.map((s, i) => `
+                                        ${i > 0 ? '<span class="chain-arrow">→</span>' : ''}
+                                        <span class="chain-score ${s === Math.max(...scores) ? 'best' : ''}">${s}</span>`).join('')}
+                                </div>` : ''}
+                        </div>`;
+                }).join('')}
+            </div>`;
+    }
+
+    function renderCompetitionTab() {
+        const p = currentPlan;
+        if (!p.competition_data) {
+            document.getElementById('tab-competition').innerHTML = `
+                <div class="state-box" style="padding:40px 20px">
+                    <div class="icon">🏢</div>
+                    <h3>No Competition Data</h3>
+                    <p>Competition analysis wasn't available for this plan.</p>
+                </div>`;
+            return;
+        }
+
+        const c = p.competition_data;
+        const aimComp = c.aim_level?.aim_competitors || [];
+        const summary = c.summary_level;
+        const clusters = summary?.cluster_analysis || [];
+
+        document.getElementById('tab-competition').innerHTML = `
+            ${aimComp.length ? `
+                <div class="section">
+                    <div class="section-label">🎯 AIM-Level Competitors (${aimComp.length})</div>
+                    ${aimComp.map(comp => `
+                        <div class="comp-card">
+                            <div class="comp-company">${comp.company_name}</div>
+                            <div class="comp-desc">${comp.description_of_focus}</div>
+                            <div class="similarity-row">
+                                <span style="font-size:10px;color:var(--muted);flex-shrink:0">Similarity</span>
+                                <div class="sim-bar">
+                                    <div class="sim-fill" style="width:${(comp.similarity_score||0)*100}%"></div>
+                                </div>
+                                <span class="sim-val">${((comp.similarity_score||0)*100).toFixed(0)}%</span>
+                            </div>
+                            ${comp.differentiation_factor ? `<div style="font-size:11px;color:var(--green);margin-top:8px">💡 ${comp.differentiation_factor}</div>` : ''}
+                        </div>`).join('')}
+                </div>` : ''}
+
+            ${clusters.length ? `
+                <div class="section">
+                    <div class="section-label">📊 Market Clusters (${clusters.length})</div>
+                    ${clusters.map(cl => `
+                        <div class="comp-card">
+                            <div class="comp-company" style="margin-bottom:6px">${cl.cluster_name}</div>
+                            <div class="similarity-row" style="margin-bottom:10px">
+                                <span style="font-size:10px;color:var(--muted);flex-shrink:0">Competition</span>
+                                <div class="sim-bar"><div class="sim-fill" style="width:${(cl.competition_density||0)*100}%"></div></div>
+                                <span class="sim-val">${((cl.competition_density||0)*100).toFixed(0)}%</span>
+                            </div>
+                            ${(cl.related_companies||[]).slice(0,4).map(co => `
+                                <div style="font-size:12px;color:var(--muted);padding:2px 0">• ${co.company_name}</div>`).join('')}
+                        </div>`).join('')}
+                </div>` : ''}
+
+            ${summary?.strategic_summary ? `
+                <div class="section">
+                    <div class="section-label">📌 Strategic Summary</div>
+                    <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px">
+                        ${summary.strategic_summary.unique_strengths?.length ? `
+                            <div style="margin-bottom:12px">
+                                <div style="font-size:11px;color:var(--green);font-weight:600;margin-bottom:6px">✅ Unique Strengths</div>
+                                ${summary.strategic_summary.unique_strengths.map(s => `<div style="font-size:12px;color:var(--muted);padding:2px 0">• ${s}</div>`).join('')}
+                            </div>` : ''}
+                        ${summary.strategic_summary.direct_competitors?.length ? `
+                            <div>
+                                <div style="font-size:11px;color:var(--red);font-weight:600;margin-bottom:6px">⚔️ Direct Competitors</div>
+                                ${summary.strategic_summary.direct_competitors.map(s => `<div style="font-size:12px;color:var(--muted);padding:2px 0">• ${s}</div>`).join('')}
+                            </div>` : ''}
+                    </div>
+                </div>` : ''}`;
+    }
+
+    function renderFeaturesTab() {
+        const p = currentPlan;
+
+        // Try to get features from result if no dedicated features field
+        let features = [];
+        if (p.features && Array.isArray(p.features)) {
+            features = p.features;
+        } else if (p.result?.agents) {
+            // Extract step names as proxy features
+            Object.values(p.result.agents).forEach(agent => {
+                Object.values(agent.steps || {}).forEach(step => {
+                    if (step && !features.includes(step)) features.push(step);
+                });
+            });
+        }
+
+        if (!features.length) {
+            document.getElementById('tab-features').innerHTML = `
+                <div class="state-box" style="padding:40px 20px">
+                    <div class="icon">✨</div>
+                    <h3>No Feature Data</h3>
+                    <p>Feature discovery data wasn't captured for this plan.</p>
+                </div>`;
+            return;
+        }
+
+        document.getElementById('tab-features').innerHTML = `
+            <div class="section">
+                <div class="section-label">✨ Discovered Features (${features.length})</div>
+                <div class="feature-cloud">
+                    ${features.map((f, i) => `
+                        <div class="feature-tag" style="animation:slideUp 0.3s ease ${i*0.02}s both">
+                            ${typeof f === 'string' ? f : (f.feature || f.text || JSON.stringify(f))}
+                        </div>`).join('')}
+                </div>
+            </div>`;
+    }
+
+    // UTILS
+    function formatDate(d) {
+        if (!d) return '–';
+        return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function truncate(str, len) {
+        return str?.length > len ? str.slice(0, len) + '...' : str;
+    }
+
+    function goNewPlan() { window.location.href = 'index.html'; }
+
+    function handleLogout() {
+        sessionStorage.removeItem('aiPlanner_user');
+        localStorage.removeItem('aiPlanner_user');
+        window.location.href = 'index.html';
+    }
+
+    // Start
+    init();
+</script>
+</body>
+</html>
