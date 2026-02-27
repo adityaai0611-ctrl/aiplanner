@@ -66,3 +66,38 @@ GPM_PLATEAU_PATIENCE        = 3      # gens without improvement → stop
 GPM_IMMIGRANT_RATE          = 0.10  # fraction of population replaced randomly
 GPM_TOURNAMENT_SIZE         = 3      # competitors in tournament selection
 GPM_MIN_POPULATION          = 4      # minimum population size
+
+# ─── Feature 6: Causal Reasoning Engine ──────────────────────────────────────
+CRE_BOTTLENECK_FAN_THRESHOLD   = 3
+CRE_CASCADE_RISK_THRESHOLD     = 0.70
+CRE_INJECT_INTO_PROMPTS        = True
+CRE_MAX_MITIGATION_STEPS       = 2
+
+# ─── Feature 7: Multi-Agent Debate Protocol ──────────────────────────────────
+MADP_DEBATE_ROUNDS             = 3
+MADP_TOKENS_PER_ROUND          = 600
+MADP_MIN_CONCESSIONS_REQUIRED  = 1
+MADP_SCORE_IMPROVEMENT_MIN     = 3.0
+MADP_PROPONENT_CREDIBILITY_BONUS = 0.05
+
+# ─── Feature 8: Temporal Execution Simulator ─────────────────────────────────
+TES_MONTE_CARLO_N              = 500
+TES_DURATION_VARIANCE          = 0.30
+TES_PARALLEL_MIN_SAVINGS_PCT   = 15.0
+TES_CONFLICT_DETECTION_ENABLED = True
+TES_DEFAULT_DOMAIN             = "technology"
+
+# ─── Feature 9: Semantic Plan Compression Engine ─────────────────────────────
+SPCE_REDUNDANCY_THRESHOLD      = 0.85
+SPCE_MERGE_THRESHOLD_LO        = 0.70
+SPCE_MERGE_THRESHOLD_HI        = 0.85
+SPCE_TARGET_COMPRESSION_PCT    = 0.30
+SPCE_ANTI_REGRESSION_MAX_DROP  = 3.0
+SPCE_MIN_STEPS_AFTER_COMPRESS  = 4
+
+# ─── Feature 10: Autonomous Self-Correction Loop ─────────────────────────────
+ASCL_ESCALATION_THRESHOLD      = 3
+ASCL_MICROPLAN_MAX_STEPS       = 5
+ASCL_HEALTH_DECAY_PER_DEVIATION= 8.0
+ASCL_TIMELINE_SLIP_TRIGGER_PCT = 1.30
+ASCL_WEBHOOK_ENDPOINT          = None
