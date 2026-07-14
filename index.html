@@ -1,2207 +1,350 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Planner </title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @keyframes slideUp {
-            from {
-                transform: translateY(20px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>IPU Results Portal - Check Your Results Online</title>
+<style>
+  :root{
+    --navy:#0f2a4a;
+    --navy-dark:#0a1d33;
+    --accent-blue:#2563eb;
+    --white:#ffffff;
+    --gray-50:#f8fafc;
+    --gray-100:#f1f5f9;
+    --gray-200:#e2e8f0;
+    --gray-400:#94a3b8;
+    --gray-500:#64748b;
+    --gray-600:#475569;
+    --spacing-5:20px;
+    --spacing-6:24px;
+    --shadow-md:0 10px 25px rgba(0,0,0,.08);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Segoe UI',Arial,sans-serif;background:var(--gray-50);color:var(--navy);}
+  a{color:inherit;}
 
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
+  /* Header */
+  .main-header{background:var(--white);border-bottom:1px solid var(--gray-200);position:sticky;top:0;z-index:50;}
+  .header-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 24px;}
+  .header-logo-link{display:flex;align-items:center;gap:8px;font-weight:700;font-size:1.1rem;text-decoration:none;color:var(--navy);}
+  .header-logo-link svg{width:26px;height:26px;stroke:var(--accent-blue);}
+  .header-nav{display:flex;gap:24px;}
+  .header-nav a{text-decoration:none;font-size:.95rem;color:var(--gray-600);}
+  .header-nav a:hover{color:var(--accent-blue);}
+  .internals-nav-pill{display:flex;align-items:center;gap:6px;background:var(--gray-100);padding:6px 14px;border-radius:20px;text-decoration:none;font-size:.85rem;}
+  .new-badge{background:var(--accent-blue);color:#fff;font-size:.65rem;padding:2px 6px;border-radius:8px;font-weight:700;}
+  .mobile-menu-toggle{display:none;background:none;border:none;cursor:pointer;}
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
+  /* Login section */
+  .login-container{display:flex;justify-content:center;padding:50px 16px;}
+  .login-wrapper{width:100%;max-width:420px;}
+  .login-header{text-align:center;margin-bottom:20px;}
+  .login-logo{width:48px;height:48px;margin:0 auto 10px;background:var(--accent-blue);border-radius:12px;display:flex;align-items:center;justify-content:center;}
+  .login-logo svg{width:26px;height:26px;stroke:#fff;}
+  .login-header h1{font-size:1.4rem;margin:0;}
+  .login-card{background:#fff;border:1px solid var(--gray-200);border-radius:16px;padding:28px;box-shadow:var(--shadow-md);}
+  .form-group{margin-bottom:18px;}
+  .form-label{display:block;font-size:.85rem;font-weight:600;margin-bottom:6px;color:var(--gray-600);}
+  .form-input{width:100%;padding:10px 12px;border:1px solid var(--gray-200);border-radius:8px;font-size:.95rem;}
+  .password-input-wrapper{position:relative;}
+  .btn-password-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--gray-500);}
+  .btn-password-toggle svg{width:18px;height:18px;}
+  .captcha-container{display:flex;gap:8px;align-items:center;}
+  .captcha-image{flex:1;height:48px;border:1px dashed var(--gray-200);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--gray-50);}
+  .captcha-placeholder{display:flex;align-items:center;gap:6px;color:var(--gray-500);font-size:.8rem;}
+  .captcha-placeholder svg{width:16px;height:16px;}
+  .captcha-loader{display:flex;align-items:center;gap:6px;color:var(--gray-500);font-size:.8rem;}
+  .spinner{width:16px;height:16px;animation:spin 1s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .btn-reload{background:var(--gray-100);border:none;border-radius:8px;width:40px;height:48px;cursor:pointer;}
+  .btn-reload svg{width:18px;height:18px;}
+  .btn-primary{width:100%;padding:12px;background:var(--accent-blue);color:#fff;border:none;border-radius:8px;font-weight:700;font-size:1rem;cursor:pointer;margin-top:6px;}
+  .btn-primary:hover{background:#1d4ed8;}
+  .status-message{text-align:center;font-size:.85rem;margin-top:10px;min-height:18px;color:var(--gray-600);}
 
-        @keyframes popIn {
-            0% {
-                transform: scale(0.5);
-                opacity: 0;
-            }
-            50% {
-                transform: scale(1.1);
-            }
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
+  /* Resources */
+  .resources-section{padding:60px 0;background:#fff;}
+  .resources-container{max-width:1200px;margin:0 auto;padding:0 24px;}
+  .section-header{text-align:center;margin-bottom:40px;}
+  .section-header h2{font-size:2rem;color:var(--navy);}
+  .section-header p{color:var(--gray-500);margin-top:10px;}
+  .resources-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;}
+  .resource-card{display:block;padding:24px;background:var(--gray-50);border-radius:12px;text-decoration:none;border:1px solid var(--gray-200);transition:all .3s ease;}
+  .resource-card:hover{transform:translateY(-5px);box-shadow:var(--shadow-md);border-color:var(--accent-blue);}
+  .resource-card h3{color:var(--navy);margin:0 0 8px;display:flex;align-items:center;gap:10px;font-size:1.2rem;}
+  .resource-card h3 svg{width:20px;height:20px;}
+  .resource-card p{color:var(--gray-600);font-size:.9rem;margin:0;}
+  .calculator-card-wide{grid-column:span 2;border:1px solid var(--accent-blue);background:linear-gradient(135deg,#f0f7ff 0%,#e0f2fe 100%);}
+  @media(max-width:768px){.resources-grid{grid-template-columns:1fr;}.calculator-card-wide{grid-column:span 1;}}
 
-        @keyframes countUp {
-            0% {
-                transform: translateY(10px) scale(1.5);
-                opacity: 0;
-            }
-            100% {
-                transform: translateY(0) scale(1);
-                opacity: 1;
-            }
-        }
-
-        .slide-up {
-            animation: slideUp 0.5s ease-out;
-        }
-
-        .fade-in {
-            animation: fadeIn 0.3s ease-in;
-        }
-
-        .pulse-animate {
-            animation: pulse 2s infinite;
-        }
-
-        .pop-in {
-            animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        }
-
-        .count-up {
-            animation: countUp 0.4s ease-out;
-        }
-
-        .feature-badge {
-            animation: popIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-        }
-
-        .scroll-smooth {
-            scroll-behavior: smooth;
-        }
-
-        .mini-plan-card {
-            transition: all 0.3s ease;
-        }
-
-        .mini-plan-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -5px rgba(139, 92, 246, 0.2);
-        }
-
-        .step-item {
-            animation: slideUp 0.4s ease-out;
-            animation-fill-mode: both;
-        }
-
-        .feature-panel {
-            position: sticky;
-            top: 20px;
-        }
-        
-        @keyframes alertPulse {
-            0%, 100% { 
-                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
-            }
-            50% { 
-                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
-            }
-        }
-        
-        .fraud-alert {
-            animation: alertPulse 2s infinite;
-        }
-    </style>
+  /* Footer */
+  .site-footer{background:var(--navy-dark);color:var(--gray-400);padding:40px 24px 20px;}
+  .footer-container{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
+  .footer-section h4{color:#fff;margin:0 0 10px;font-size:1rem;}
+  .footer-section ul{list-style:none;padding:0;margin:0;}
+  .footer-section li{margin-bottom:6px;}
+  .footer-section a{text-decoration:none;font-size:.85rem;color:var(--gray-400);}
+  .footer-section a:hover{color:#fff;}
+  .footer-bottom{text-align:center;margin-top:30px;font-size:.8rem;border-top:1px solid rgba(255,255,255,.1);padding-top:16px;}
+  @media(max-width:768px){.footer-container{grid-template-columns:1fr;}}
+</style>
 </head>
-<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen">
-    <div id="app" class="min-h-screen"></div>
-
-    <script>
-        // UPDATED STATE WITH STOP/DOWNLOAD FUNCTIONALITY
-        let state = {
-            isAuthenticated: false,
-            showLogin: true,
-            username: '',
-            password: '',
-            email: '',
-            currentUser: null,
-            aim: '',
-            steps: { step1: '', step2: '' },
-            phase: 'input',
-            apiResponse: null,
-            isLoading: false,
-            isStopping: false,
-            realtimeEvents: [],
-            currentPhase: null,
-            agentProgress: {},
-            liveAgentPlans: {},
-            analyticsData: {},
-            eventSource: null,
-            discoveredFeatures: [],
-            featureCount: 0,
-            newFeatureAnimation: null,
-            naturalLanguageInput: '',
-            showConfirmation: false,
-            fraudDetections: [],
-            fraudAlertCount: 0,
-            techSuggestions: [],
-            safetyNodes: [],
-            // Tool management
-            toolName: '',
-            isToolProcessing: false,
-            activeTool: null,
-            toolProcessingStatus: '',
-            // Competition tracking
-            competitionData: {
-                aim: null,
-                steps: [],
-                summary: null
-            },
-            showCompetitionPanel: true
-        };
-
-        function setState(updates) {
-            const needsFullRender = 
-                updates.hasOwnProperty('isAuthenticated') ||
-                updates.hasOwnProperty('showLogin') ||
-                updates.hasOwnProperty('phase') ||
-                updates.hasOwnProperty('showConfirmation');
-            
-            state = { ...state, ...updates };
-            
-            if (needsFullRender) {
-                render();
-            }
-        }
-
-        async function parseNaturalLanguage() {
-            const input = document.getElementById('naturalLanguageInput').value.trim();
-            const parseButton = document.getElementById('parseButton');
-            const parseButtonText = document.getElementById('parseButtonText');
-            
-            if (!input) {
-                alert('Please enter some text to convert');
-                return;
-            }
-            
-            if (input.length < 10) {
-                alert('Please provide more details (at least 10 characters)');
-                return;
-            }
-            
-            setState({ isLoading: true });
-            if (parseButtonText) parseButtonText.textContent = 'Converting...';
-            if (parseButton) parseButton.disabled = true;
-            
-            try {
-                const response = await fetch('http://localhost:5000/api/parse-natural-language', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ input: input })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok && data.success) {
-                    setState({
-                        aim: data.aim,
-                        steps: data.steps,
-                        naturalLanguageInput: input,
-                        showConfirmation: true,
-                        isLoading: false
-                    });
-                } else {
-                    alert('❌ ' + (data.message || 'Failed to parse input'));
-                    setState({ isLoading: false });
-                }
-                
-            } catch (error) {
-                console.error('Parse error:', error);
-                alert('❌ Unable to connect to server');
-                setState({ isLoading: false });
-            } finally {
-                if (parseButtonText) parseButtonText.textContent = 'Convert to AIM + Steps';
-                if (parseButton) parseButton.disabled = false;
-            }
-        }
-
-        function confirmAndStartPlanning() {
-            setState({ 
-                showConfirmation: false,
-                naturalLanguageInput: ''
-            });
-            startPlanning();
-        }
-
-        function goBackToEdit() {
-            setState({ 
-                showConfirmation: false
-            });
-            
-            setTimeout(() => {
-                const nlInput = document.getElementById('naturalLanguageInput');
-                if (nlInput) {
-                    nlInput.value = state.naturalLanguageInput;
-                    nlInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    nlInput.focus();
-                }
-            }, 100);
-        }
-
-        function renderConfirmationScreen() {
-            return `
-                <div class="space-y-6 max-w-5xl mx-auto">
-                    ${state.activeTool ? `
-                        <div class="bg-white bg-opacity-10 backdrop-blur-lg rounded-xl p-4 border-2 border-blue-400 border-opacity-50 shadow-lg slide-up">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-12 h-12 bg-blue-500 bg-opacity-20 rounded-lg flex items-center justify-center">
-                                        <span class="text-2xl">🔧</span>
-                                    </div>
-                                    <div>
-                                        <div class="text-xs text-blue-300 font-semibold uppercase">Active Tool</div>
-                                        <div class="text-blue-200 font-bold text-xl">${state.activeTool.name}</div>
-                                        <div class="text-blue-400 text-xs mt-0.5">Will be used during planning</div>
-                                    </div>
-                                </div>
-                                <button 
-                                    onclick="removeTool()"
-                                    class="group w-10 h-10 bg-red-500 bg-opacity-10 hover:bg-opacity-30 rounded-lg flex items-center justify-center transition-all border border-red-500 border-opacity-30 hover:border-opacity-60"
-                                    title="Remove tool"
-                                >
-                                    <span class="text-red-400 group-hover:text-red-300 text-xl font-bold">✕</span>
-                                </button>
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    <div class="text-center">
-                        <div class="w-20 h-20 bg-gradient-to-br from-green-500 to-blue-500 rounded-full mx-auto mb-4 flex items-center justify-center text-5xl animate-bounce">
-                            ✅
-                        </div>
-                        <h2 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-400 mb-2">
-                            AI Interpretation Complete
-                        </h2>
-                        <p class="text-slate-400 text-lg">
-                            Please review and confirm the structured plan below
-                        </p>
-                    </div>
-
-                    <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-xl p-6 border border-slate-700">
-                        <div class="flex items-center gap-2 mb-3">
-                            <span class="text-2xl">📝</span>
-                            <h3 class="text-lg font-semibold text-slate-300">Your Original Input:</h3>
-                        </div>
-                        <div class="bg-slate-900 bg-opacity-50 rounded-lg p-4 border border-slate-600">
-                            <p class="text-slate-300 italic leading-relaxed">"${state.naturalLanguageInput}"</p>
-                        </div>
-                    </div>
-
-                    <div class="bg-gradient-to-br from-green-900 via-blue-900 to-slate-900 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border-2 border-green-500 border-opacity-30 shadow-2xl">
-                        <div class="flex items-center gap-3 mb-6">
-                            <span class="text-4xl">🎯</span>
-                            <div>
-                                <h3 class="text-2xl font-bold text-green-300">AI Interpreted This As:</h3>
-                                <p class="text-slate-400 text-sm">Structured into AIM and STEPS format</p>
-                            </div>
-                        </div>
-
-                        <div class="mb-6">
-                            <div class="flex items-center gap-2 mb-3">
-                                <div class="w-8 h-8 bg-blue-500 bg-opacity-20 rounded-lg flex items-center justify-center">
-                                    <span class="text-xl">🎯</span>
-                                </div>
-                                <h4 class="text-xl font-bold text-blue-300">Main Goal (AIM)</h4>
-                            </div>
-                            <div class="bg-slate-900 bg-opacity-50 rounded-xl p-5 border-l-4 border-blue-500">
-                                <p class="text-white text-lg font-medium leading-relaxed">${state.aim}</p>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div class="flex items-center gap-2 mb-3">
-                                <div class="w-8 h-8 bg-purple-500 bg-opacity-20 rounded-lg flex items-center justify-center">
-                                    <span class="text-xl">➡️</span>
-                                </div>
-                                <h4 class="text-xl font-bold text-purple-300">Action Steps (${Object.keys(state.steps).length} steps)</h4>
-                            </div>
-                            <div class="space-y-3">
-                                ${Object.entries(state.steps).map(([key, step], index) => `
-                                    <div class="flex items-start gap-3 bg-slate-900 bg-opacity-50 rounded-xl p-4 border-l-4 border-purple-500 slide-up" style="animation-delay: ${index * 0.05}s">
-                                        <div class="w-8 h-8 bg-purple-500 bg-opacity-20 rounded-lg flex items-center justify-center flex-shrink-0">
-                                            <span class="text-purple-300 font-bold">${index + 1}</span>
-                                        </div>
-                                        <p class="text-slate-200 text-base leading-relaxed pt-1">${step}</p>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-4">
-                        <button 
-                            onclick="goBackToEdit()"
-                            class="flex-1 flex items-center justify-center gap-3 py-4 bg-slate-700 hover:bg-slate-600 rounded-xl font-semibold text-lg transition-all border-2 border-slate-600 hover:border-slate-500"
-                        >
-                            <span class="text-2xl">⬅️</span>
-                            <span>Go Back & Edit</span>
-                        </button>
-                        
-                        <button 
-                            onclick="confirmAndStartPlanning()"
-                            class="flex-1 flex items-center justify-center gap-3 py-4 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 rounded-xl font-semibold text-lg transition-all shadow-lg border-2 border-green-500 border-opacity-30"
-                        >
-                            <span class="text-2xl">🚀</span>
-                            <span>Looks Good! Start Planning</span>
-                        </button>
-                    </div>
-
-                    <div class="bg-blue-500 bg-opacity-10 border border-blue-500 border-opacity-30 rounded-xl p-4">
-                        <div class="flex items-start gap-3">
-                            <span class="text-2xl">💡</span>
-                            <div>
-                                <p class="text-blue-300 font-semibold mb-1">What happens next?</p>
-                                <p class="text-slate-400 text-sm">
-                                    If you click "Start Planning", our 12 AI agents will analyze and improve this plan from different perspectives, 
-                                    discovering new features and optimizations in real-time.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        async function startPlanning() {
-            setState({ 
-                isLoading: true, 
-                phase: 'processing',
-                realtimeEvents: [],
-                agentProgress: {},
-                liveAgentPlans: {},
-                analyticsData: {},
-                discoveredFeatures: [],
-                featureCount: 0,
-                fraudDetections: [],
-                fraudAlertCount: 0,
-                techSuggestions: [],
-                safetyNodes: [],
-                competitionData: {
-                    aim: null,
-                    steps: [],
-                    summary: null
-                }
-            });
-
-            try {
-                const response = await fetch('http://localhost:5000/api/plan/stream', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        username: state.currentUser,
-                        aim: state.aim,
-                        steps: state.steps
-                    })
-                });
-
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n\n');
-
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            const eventData = JSON.parse(line.substring(6));
-                            handleRealtimeEvent(eventData);
-                        }
-                    }
-                }
-
-            } catch (error) {
-                console.error('Streaming error:', error);
-                alert('Planning failed: ' + error.message);
-                setState({ phase: 'input', isLoading: false });
-            }
-        }
-
-        function parseStepsFromPlan(planText) {
-            if (!planText) return [];
-            
-            const steps = [];
-            const lines = planText.split('\n');
-            
-            for (const line of lines) {
-                const trimmed = line.trim();
-                if (trimmed && (
-                    trimmed.startsWith('-') || 
-                    trimmed.startsWith('•') || 
-                    /^\d+\./.test(trimmed) ||
-                    /^step\s*\d+/i.test(trimmed)
-                )) {
-                    let step = trimmed
-                        .replace(/^[-•]/, '')
-                        .replace(/^\d+\./, '')
-                        .replace(/^step\s*\d+:?/i, '')
-                        .trim();
-                    
-                    if (step) {
-                        steps.push(step);
-                    }
-                }
-            }
-            
-            return steps;
-        }
-
-        // UPDATED handleRealtimeEvent WITH COMPETITION EVENT HANDLERS
-        function handleRealtimeEvent(event) {
-            console.log('Real-time event:', event);
-            state.realtimeEvents.push(event);
-
-            const timestamp = new Date();
-
-            switch(event.type) {
-                case 'connected':
-                    addLogMessage('✅ Connected to AI Planning System', 'success');
-                    break;
-
-                case 'process_start':
-                    addLogMessage(`🚀 Starting planning for ${event.data.agents_count} AI agents`, 'info');
-                    state.analyticsData.processStartTime = timestamp;
-                    break;
-
-                case 'feature_detection_start':
-                    addLogMessage('🔍 Starting feature detection...', 'feature');
-                    break;
-
-                case 'features_discovered':
-                case 'features_detected':
-                    handleFeatureDetection(event.data);
-                    break;
-
-                // NEW COMPETITION EVENT HANDLERS
-                case 'aim_competition_analyzed':
-                    handleAimCompetition(event.data);
-                    break;
-
-                case 'step_competition_analyzed':
-                    handleStepCompetition(event.data);
-                    break;
-
-                case 'summary_competition_analyzed':
-                    handleSummaryCompetition(event.data);
-                    break;
-
-                case 'phase_start':
-                    state.currentPhase = event.data.phase;
-                    addLogMessage(`📍 Phase ${event.data.phase}: ${event.data.description}`, 'info');
-                    updateProcessingDisplay();
-                    break;
-
-                case 'agent_start':
-                    addLogMessage(`🤖 ${event.data.agent.toUpperCase()} - Starting plan generation`, 'agent');
-                    state.liveAgentPlans[event.data.agent] = {
-                        status: 'generating',
-                        mini_plans: [],
-                        final_plan: null,
-                        steps: [],
-                        score: null,
-                        startTime: timestamp,
-                        parameters_used: []
-                    };
-                    updateAgentProgress(event.data.agent, 'generating', 0);
-                    updateLivePlansDisplay();
-                    break;
-
-                case 'mini_plan_start':
-                    addLogMessage(`  🔍 ${event.data.agent.toUpperCase()} - Processing group ${event.data.group}/${event.data.total_groups}`, 'progress');
-                    
-                    if (state.liveAgentPlans[event.data.agent]) {
-                        const miniPlanData = {
-                            group: event.data.group,
-                            startTime: timestamp,
-                            status: 'processing',
-                            parameters: event.data.parameters || []
-                        };
-                        
-                        if (!state.liveAgentPlans[event.data.agent].current_mini_plan) {
-                            state.liveAgentPlans[event.data.agent].current_mini_plan = miniPlanData;
-                        }
-                    }
-                    
-                    updateAgentProgress(event.data.agent, 'generating', event.data.progress);
-                    updateLivePlansDisplay();
-                    break;
-
-                case 'mini_plan_complete':
-                    const completionTime = timestamp;
-                    const agent = event.data.agent;
-                    
-                    addLogMessage(`  ✅ ${agent.toUpperCase()} - Group ${event.data.group} completed`, 'success');
-                    
-                    if (state.liveAgentPlans[agent]) {
-                        const miniPlan = state.liveAgentPlans[agent].current_mini_plan || {};
-                        const duration = miniPlan.startTime ? 
-                            ((completionTime - miniPlan.startTime) / 1000).toFixed(2) : 0;
-                        
-                        const completedMiniPlan = {
-                            group: event.data.group,
-                            preview: event.data.mini_plan,
-                            steps: parseStepsFromPlan(event.data.mini_plan),
-                            startTime: miniPlan.startTime || completionTime,
-                            endTime: completionTime,
-                            duration: duration,
-                            parameters: event.data.parameters || miniPlan.parameters || [],
-                            status: 'completed'
-                        };
-                        
-                        state.liveAgentPlans[agent].mini_plans.push(completedMiniPlan);
-                        state.liveAgentPlans[agent].current_mini_plan = null;
-                    }
-                    
-                    updateAgentProgress(event.data.agent, 'generating', event.data.progress);
-                    updateLivePlansDisplay();
-                    scrollToLatestMiniPlan(agent);
-                    break;
-
-                case 'summarizing':
-                    addLogMessage(`  📋 ${event.data.agent.toUpperCase()} - Summarizing ${event.data.mini_plans_count} mini-plans`, 'info');
-                    if (state.liveAgentPlans[event.data.agent]) {
-                        state.liveAgentPlans[event.data.agent].status = 'summarizing';
-                    }
-                    updateLivePlansDisplay();
-                    break;
-
-                case 'agent_complete':
-                    addLogMessage(`  🎉 ${event.data.agent.toUpperCase()} - Plan complete! Score: ${event.data.score}/100`, 'success');
-                    
-                    if (state.liveAgentPlans[event.data.agent]) {
-                        const agentData = state.liveAgentPlans[event.data.agent];
-                        agentData.final_plan = event.data.plan;
-                        agentData.steps = parseStepsFromPlan(event.data.plan);
-                        agentData.score = event.data.score;
-                        agentData.status = 'complete';
-                        agentData.endTime = timestamp;
-                        
-                        const totalDuration = agentData.startTime ? 
-                            ((timestamp - agentData.startTime) / 1000).toFixed(2) : 0;
-                        agentData.totalDuration = totalDuration;
-                    }
-                    
-                    updateAgentProgress(event.data.agent, 'complete', 100, event.data.score);
-                    updateLivePlansDisplay();
-                    break;
-
-                case 'improvement_chain_start':
-                    addLogMessage(`🔄 Starting improvement chain for ${event.data.original_agent.toUpperCase()}`, 'info');
-                    if (state.liveAgentPlans[event.data.original_agent]) {
-                        state.liveAgentPlans[event.data.original_agent].status = 'improving';
-                        state.liveAgentPlans[event.data.original_agent].improvements = [];
-                    }
-                    updateLivePlansDisplay();
-                    break;
-
-                case 'improvement_start':
-                    addLogMessage(`  🔧 ${event.data.improving_agent.toUpperCase()} improving ${event.data.original_agent.toUpperCase()}'s plan (${event.data.step}/${event.data.total_steps})`, 'progress');
-                    break;
-
-                case 'improvement_complete':
-                    addLogMessage(`  ✨ ${event.data.improving_agent.toUpperCase()} improved to score: ${event.data.score}`, 'success');
-                    
-                    if (state.liveAgentPlans[event.data.original_agent]) {
-                        const improvement = {
-                            by_agent: event.data.improving_agent,
-                            step: event.data.step,
-                            score: event.data.score,
-                            plan_preview: event.data.plan_preview,
-                            steps: parseStepsFromPlan(event.data.plan_preview),
-                            timestamp: timestamp
-                        };
-                        
-                        if (!state.liveAgentPlans[event.data.original_agent].improvements) {
-                            state.liveAgentPlans[event.data.original_agent].improvements = [];
-                        }
-                        state.liveAgentPlans[event.data.original_agent].improvements.push(improvement);
-                    }
-                    
-                    updateAgentProgress(event.data.original_agent, 'improving', 
-                        (event.data.step / 11) * 100, event.data.score);
-                    updateLivePlansDisplay();
-                    break;
-
-                case 'improvement_chain_complete':
-                    addLogMessage(`  🏁 ${event.data.original_agent.toUpperCase()} - Final score: ${event.data.final_score} (avg: ${event.data.average_score.toFixed(1)})`, 'success');
-                    
-                    if (state.liveAgentPlans[event.data.original_agent]) {
-                        state.liveAgentPlans[event.data.original_agent].final_score = event.data.final_score;
-                        state.liveAgentPlans[event.data.original_agent].average_score = event.data.average_score;
-                        state.liveAgentPlans[event.data.original_agent].all_scores = event.data.all_scores;
-                        state.liveAgentPlans[event.data.original_agent].status = 'improved';
-                    }
-                    updateLivePlansDisplay();
-                    break;
-
-                // FRAUD DETECTION AND TECH INTEGRATION CASES
-                case 'fraud_detection':
-                    handleFraudDetection(event.data);
-                    break;
-
-                case 'node_generated':
-                    handleNodeGeneration(event.data);
-                    break;
-
-                case 'tech_integration':
-                    handleTechIntegration(event.data);
-                    break;
-
-                case 'process_complete':
-                    addLogMessage(`🎊 Planning complete! ${event.data.total_agents} agents finished`, 'success');
-                    state.analyticsData.processEndTime = timestamp;
-                    setState({ 
-                        apiResponse: event.data.result,
-                        phase: 'results',
-                        isLoading: false
-                    });
-                    break;
-
-                case 'error':
-                    addLogMessage(`❌ Error: ${event.data.message}`, 'error');
-                    setState({ phase: 'input', isLoading: false });
-                    break;
-            }
-        }
-
-        // NEW COMPETITION HANDLING FUNCTIONS - UPDATED TO SHOW COMPANY NAMES
-        function handleAimCompetition(data) {
-            console.log('AIM Competition:', data);
-            state.competitionData.aim = data;
-            
-            const competitorCount = data.aim_competitors?.length || 0;
-            addLogMessage(`🏢 AIM Analysis: Found ${competitorCount} competitors`, 'info');
-            
-            updateCompetitionPanel();
-        }
-
-        function handleStepCompetition(data) {
-            console.log('Step Competition:', data);
-            state.competitionData.steps.push(data);
-            
-            const totalCompanies = data.total_companies || 0;
-            addLogMessage(`🏢 Step Analysis (${data.source}): ${totalCompanies} companies`, 'info');
-            
-            updateCompetitionPanel();
-        }
-
-        function handleSummaryCompetition(data) {
-            console.log('Summary Competition:', data);
-            state.competitionData.summary = data;
-            
-            const clusterCount = data.cluster_analysis?.length || 0;
-            addLogMessage(`🏢 Summary Analysis: ${clusterCount} clusters analyzed`, 'info');
-            
-            updateCompetitionPanel();
-        }
-
-        function updateCompetitionPanel() {
-            const panel = document.getElementById('competitionPanel');
-            if (!panel) return;
-
-            const { aim, steps, summary } = state.competitionData;
-            
-            let html = '<div class="space-y-3">';
-
-            // AIM Competition - Show Company Names
-            if (aim) {
-                const competitors = aim.aim_competitors || [];
-                html += `
-                    <div class="bg-gradient-to-r from-blue-900 to-purple-900 bg-opacity-40 rounded-xl p-3 border border-blue-500 border-opacity-30">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-xl">🎯</span>
-                            <h3 class="text-sm font-bold text-blue-300">AIM Competitors</h3>
-                        </div>
-                        <div class="space-y-2 max-h-48 overflow-y-auto">
-                            ${competitors.map(comp => `
-                                <div class="bg-slate-900 bg-opacity-50 rounded-lg p-2 border-l-2 border-blue-500">
-                                    <div class="font-bold text-blue-200 text-sm">${comp.company_name}</div>
-                                    <p class="text-xs text-slate-400 mt-1">${comp.description_of_focus}</p>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                `;
-            }
-
-            // Step Competition - Show Company Names
-            if (steps.length > 0) {
-                const allCompanies = steps.flatMap(s => 
-                    (s.analysis?.step_analysis || []).flatMap(step => 
-                        (step.related_companies || []).map(c => c.company_name)
-                    )
-                ).filter((v, i, a) => a.indexOf(v) === i);
-                
-                html += `
-                    <div class="bg-gradient-to-r from-purple-900 to-pink-900 bg-opacity-40 rounded-xl p-3 border border-purple-500 border-opacity-30">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-xl">🔍</span>
-                            <h3 class="text-sm font-bold text-purple-300">Step Companies</h3>
-                        </div>
-                        <div class="space-y-1 max-h-48 overflow-y-auto">
-                            ${allCompanies.slice(0, 15).map(company => `
-                                <div class="bg-slate-900 bg-opacity-50 rounded px-2 py-1 text-xs text-purple-200">
-                                    • ${company}
-                                </div>
-                            `).join('')}
-                            ${allCompanies.length > 15 ? `<div class="text-xs text-slate-500 text-center">+${allCompanies.length - 15} more</div>` : ''}
-                        </div>
-                    </div>
-                `;
-            }
-
-            // Summary Competition - Show Cluster Companies
-            if (summary) {
-                const clusters = summary.cluster_analysis || [];
-                html += `
-                    <div class="bg-gradient-to-r from-green-900 to-teal-900 bg-opacity-40 rounded-xl p-3 border border-green-500 border-opacity-30">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-xl">📊</span>
-                            <h3 class="text-sm font-bold text-green-300">Market Clusters</h3>
-                        </div>
-                        <div class="space-y-2 max-h-48 overflow-y-auto">
-                            ${clusters.slice(0, 3).map(cluster => `
-                                <div class="bg-slate-900 bg-opacity-50 rounded p-2">
-                                    <div class="text-xs font-bold text-green-300 mb-1">${cluster.cluster_name}</div>
-                                    ${(cluster.related_companies || []).slice(0, 3).map(c => `
-                                        <div class="text-xs text-slate-400">• ${c.company_name}</div>
-                                    `).join('')}
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                `;
-            }
-
-            html += '</div>';
-            
-            if (!aim && steps.length === 0 && !summary) {
-                html = `
-                    <div class="text-center py-10">
-                        <div class="text-4xl mb-2 pulse-animate">🏢</div>
-                        <p class="text-slate-400 text-sm">Waiting for competition analysis...</p>
-                    </div>
-                `;
-            }
-
-            panel.innerHTML = html;
-        }
-
-        // FRAUD DETECTION FUNCTIONS
-        function handleFraudDetection(data) {
-            const result = data.result;
-            const agent = data.agent;
-            const group = data.group;
-            
-            state.fraudDetections.push({
-                agent: agent,
-                group: group,
-                ...result,
-                timestamp: new Date().toISOString()
-            });
-            
-            if (result.suspicion_score > 0.6) {
-                state.fraudAlertCount++;
-                addLogMessage(`⚠️ FRAUD ALERT - ${agent} group ${group}: ${result.risk_type} (${result.suspicion_score.toFixed(2)})`, 'error');
-            } else {
-                addLogMessage(`✅ Fraud Check - ${agent} group ${group}: Safe`, 'success');
-            }
-            
-            updateFraudPanel();
-        }
-
-        function handleNodeGeneration(data) {
-            const node = data.node;
-            const agent = data.agent;
-            const group = data.group;
-            
-            if (!node.error && !node.skipped) {
-                state.safetyNodes.push({
-                    agent: agent,
-                    group: group,
-                    ...node,
-                    timestamp: new Date().toISOString()
-                });
-                
-                addLogMessage(`🛡️ Safety Node Generated: ${node.node_name}`, 'info');
-            }
-        }
-
-        function handleTechIntegration(data) {
-            const suggestions = data.suggestions;
-            const agent = data.agent;
-            const group = data.group;
-            
-            if (suggestions && !suggestions.error) {
-                state.techSuggestions.push({
-                    agent: agent,
-                    group: group,
-                    ...suggestions,
-                    timestamp: new Date().toISOString()
-                });
-                
-                const count = suggestions.suggestions?.length || 0;
-                addLogMessage(`🔧 Tech Integration - ${agent} group ${group}: ${count} suggestions`, 'info');
-            }
-        }
-
-        function updateFraudPanel() {
-            const fraudList = document.getElementById('fraudDetectionList');
-            if (!fraudList) return;
-            
-            const recentFrauds = state.fraudDetections.slice(-10).reverse();
-            
-            if (recentFrauds.length === 0) {
-                fraudList.innerHTML = `
-                    <div class="text-center py-8">
-                        <div class="text-4xl mb-2">🛡️</div>
-                        <p class="text-slate-400 text-sm">No fraud checks yet</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            fraudList.innerHTML = recentFrauds.map((fraud, idx) => {
-                const isAlert = fraud.suspicion_score > 0.6;
-                const borderColor = isAlert ? 'border-red-500' : 'border-green-500';
-                const bgColor = isAlert ? 'from-red-900' : 'from-green-900';
-                const icon = isAlert ? '⚠️' : '✅';
-                
-                return `
-                    <div class="bg-gradient-to-r ${bgColor} to-slate-900 bg-opacity-40 border ${borderColor} border-opacity-30 rounded-lg p-3 ${isAlert ? 'fraud-alert' : ''}" 
-                         style="animation-delay: ${idx * 0.05}s">
-                        <div class="flex items-start gap-3">
-                            <div class="text-2xl">${icon}</div>
-                            <div class="flex-1">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="font-bold text-sm">${fraud.agent.toUpperCase()} - Group ${fraud.group}</span>
-                                    <span class="px-2 py-0.5 bg-slate-900 bg-opacity-50 rounded text-xs ${isAlert ? 'text-red-400' : 'text-green-400'}">
-                                        ${(fraud.suspicion_score * 100).toFixed(0)}%
-                                    </span>
-                                </div>
-                                <div class="text-xs text-slate-300 mb-1">
-                                    <span class="font-semibold">Type:</span> ${fraud.risk_type}
-                                </div>
-                                <div class="text-xs text-slate-300 mb-1">
-                                    <span class="font-semibold">Action:</span> ${fraud.suggested_action}
-                                </div>
-                                ${fraud.reason_list && fraud.reason_list.length > 0 ? `
-                                    <div class="text-xs text-slate-400 mt-2">
-                                        ${fraud.reason_list.slice(0, 2).map(reason => `• ${reason}`).join('<br>')}
-                                    </div>
-                                ` : ''}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            
-            // Update counter
-            const fraudCounter = document.getElementById('fraudAlertCounter');
-            if (fraudCounter) {
-                fraudCounter.textContent = state.fraudAlertCount;
-            }
-        }
-
-        function handleFeatureDetection(data) {
-            const features = data.features || [];
-            const source = data.source || 'unknown';
-            const totalFeatures = data.total_features || 0;
-            
-            if (features.length > 0) {
-                features.forEach(feature => {
-                    state.discoveredFeatures.push({
-                        feature: feature,
-                        source: source,
-                        timestamp: new Date().toISOString()
-                    });
-                });
-                
-                state.featureCount = totalFeatures;
-                
-                addLogMessage(`✨ +${features.length} new features from ${source}`, 'feature');
-                
-                animateFeatureCounter(features.length);
-                
-                updateFeaturePanel();
-                updateFeatureStats();
-            }
-        }
-
-        function updateFeatureStats() {
-            const aimFeatures = state.discoveredFeatures.filter(f => 
-                f.source && f.source.includes('aim')).length;
-            const aiFeatures = state.discoveredFeatures.filter(f => 
-                f.source && (f.source.includes('mini_plan') || f.source.includes('group'))).length;
-            const recentFeatures = state.discoveredFeatures.filter(f => {
-                const featureTime = new Date(f.timestamp);
-                const now = new Date();
-                return (now - featureTime) < 30000;
-            }).length;
-
-            const fromAimEl = document.getElementById('fromAimCount');
-            const fromAIEl = document.getElementById('fromAICount');
-            const recentEl = document.getElementById('recentCount');
-            const mainCountEl = document.getElementById('featureCountMain');
-
-            if (fromAimEl) fromAimEl.textContent = aimFeatures;
-            if (fromAIEl) fromAIEl.textContent = aiFeatures;
-            if (recentEl) recentEl.textContent = recentFeatures;
-            if (mainCountEl) mainCountEl.textContent = state.featureCount;
-        }
-
-        function animateFeatureCounter(newCount) {
-            const counterEl = document.getElementById('featureCounter');
-            const addedEl = document.getElementById('featureAdded');
-            
-            if (counterEl && addedEl) {
-                addedEl.textContent = `+${newCount}`;
-                addedEl.classList.remove('count-up');
-                void addedEl.offsetWidth;
-                addedEl.classList.add('count-up');
-                addedEl.style.opacity = '1';
-                
-                counterEl.textContent = state.featureCount;
-                
-                setTimeout(() => {
-                    addedEl.style.opacity = '0';
-                }, 2000);
-            }
-        }
-
-        // UPDATED FEATURE PANEL - COMPACT CARDS
-        function updateFeaturePanel() {
-            const featureList = document.getElementById('featureList');
-            if (!featureList) return;
-            
-            if (state.discoveredFeatures.length === 0) {
-                featureList.innerHTML = `
-                    <div class="text-center py-10">
-                        <div class="text-4xl mb-2 pulse-animate">🔍</div>
-                        <p class="text-slate-400 text-sm">Waiting...</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            featureList.innerHTML = state.discoveredFeatures.map((featureObj, index) => {
-                const feature = featureObj.feature || featureObj;
-                const source = featureObj.source || 'unknown';
-                const sourceIcon = source.includes('aim') ? '📍' : 
-                                 source.includes('mini_plan') ? '🤖' : 
-                                 source.includes('improvement') ? '⚡' : '✨';
-                
-                return `
-                    <div class="feature-badge bg-gradient-to-r from-slate-900 to-pink-900 bg-opacity-50 backdrop-blur-sm border border-pink-500 border-opacity-30 rounded-lg p-2 hover:border-opacity-60 transition-all"
-                         style="animation-delay: ${index * 0.02}s">
-                        <div class="flex items-start gap-2">
-                            <span class="text-lg flex-shrink-0">${sourceIcon}</span>
-                            <div class="flex-1 min-w-0">
-                                <div class="text-slate-100 text-xs leading-snug break-words">
-                                    ${typeof feature === 'string' ? feature : feature.text || 'Unknown feature'}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            
-            updateFeatureStats();
-        }
-
-        function scrollToLatestMiniPlan(agent) {
-            setTimeout(() => {
-                const container = document.getElementById(`agent-${agent}-plans`);
-                if (container) {
-                    const cards = container.querySelectorAll('.mini-plan-card');
-                    if (cards.length > 0) {
-                        cards[cards.length - 1].scrollIntoView({ 
-                            behavior: 'smooth', 
-                            block: 'nearest' 
-                        });
-                    }
-                }
-            }, 100);
-        }
-
-        function addLogMessage(message, type) {
-            const logContainer = document.getElementById('realtimeLog');
-            if (logContainer) {
-                const colors = {
-                    'success': 'text-green-400',
-                    'error': 'text-red-400',
-                    'info': 'text-blue-400',
-                    'agent': 'text-purple-400',
-                    'progress': 'text-yellow-400',
-                    'feature': 'text-pink-400'
-                };
-
-                const logEntry = document.createElement('div');
-                logEntry.className = `text-sm ${colors[type] || 'text-slate-300'} mb-1 font-mono fade-in`;
-                logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-                logContainer.appendChild(logEntry);
-                logContainer.scrollTop = logContainer.scrollHeight;
-            }
-        }
-
-        function updateAgentProgress(agent, status, progress, score) {
-            state.agentProgress[agent] = { status, progress, score };
-            updateProgressBars();
-        }
-
-        function updateProgressBars() {
-            const progressContainer = document.getElementById('agentProgressContainer');
-            if (!progressContainer) return;
-
-            const agents = Object.keys(state.agentProgress);
-            progressContainer.innerHTML = agents.map(agent => {
-                const { status, progress, score } = state.agentProgress[agent];
-                const statusEmoji = {
-                    'generating': '⏳',
-                    'improving': '🔄',
-                    'complete': '✅'
-                };
-
-                return `
-                    <div class="bg-slate-900 bg-opacity-30 rounded-lg p-2">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="text-xs font-semibold text-purple-300">
-                                ${statusEmoji[status] || '⏳'} ${agent.toUpperCase()}
-                            </span>
-                            ${score ? `<span class="text-xs text-green-400 font-bold">${score}</span>` : ''}
-                        </div>
-                        <div class="w-full bg-slate-700 rounded-full h-1.5 overflow-hidden">
-                            <div class="bg-gradient-to-r from-purple-500 to-pink-500 h-1.5 rounded-full transition-all duration-500" 
-                                 style="width: ${progress}%"></div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function updateLivePlansDisplay() {
-            const plansContainer = document.getElementById('livePlansContainer');
-            if (!plansContainer) return;
-
-            const agents = Object.keys(state.liveAgentPlans);
-            plansContainer.innerHTML = agents.map(agent => {
-                const planData = state.liveAgentPlans[agent];
-                return renderCompactAgentPlanCard(agent, planData);
-            }).join('');
-        }
-
-        // UPDATED RENDER COMPACT AGENT PLAN CARD - SHOWS ALL GROUPS
-        function renderCompactAgentPlanCard(agent, planData) {
-            const statusIcons = {
-                'generating': '⏳',
-                'summarizing': '📋',
-                'complete': '✅',
-                'improving': '🔄',
-                'improved': '🎯'
-            };
-
-            const statusColors = {
-                'generating': 'bg-yellow-500',
-                'summarizing': 'bg-blue-500',
-                'complete': 'bg-green-500',
-                'improving': 'bg-purple-500',
-                'improved': 'bg-pink-500'
-            };
-
-            // Collect ALL steps from ALL groups
-            const allSteps = planData.mini_plans.flatMap((mp, idx) => 
-                mp.steps.map(step => ({ step, group: mp.group }))
-            );
-
-            return `
-                <div class="bg-slate-900 bg-opacity-40 rounded-lg p-3 mb-3 border border-slate-700">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center gap-2">
-                            <div class="w-6 h-6 rounded-full ${statusColors[planData.status]} bg-opacity-20 flex items-center justify-center text-sm">
-                                <span>${statusIcons[planData.status]}</span>
-                            </div>
-                            <div>
-                                <h4 class="text-sm font-bold text-purple-300">${agent.toUpperCase()}</h4>
-                                <p class="text-xs text-slate-500">${planData.status}</p>
-                            </div>
-                        </div>
-                        ${planData.score ? `
-                            <div class="px-2 py-1 bg-green-500 bg-opacity-20 rounded text-xs">
-                                <span class="text-green-400 font-bold">${planData.score}</span>
-                            </div>
-                        ` : ''}
-                    </div>
-
-                    ${planData.mini_plans.length > 0 ? `
-                        <div class="flex gap-2 text-xs text-slate-400 mb-2">
-                            <span>📋 ${planData.mini_plans.length} Groups</span>
-                            ${allSteps.length > 0 ? `<span>• 📝 ${allSteps.length} steps</span>` : ''}
-                        </div>
-                    ` : ''}
-
-                    ${allSteps.length > 0 ? `
-                        <div class="bg-slate-800 bg-opacity-50 rounded-lg p-3 max-h-64 overflow-y-auto space-y-2">
-                            ${planData.mini_plans.map((miniPlan, mpIdx) => `
-                                <div class="mb-3">
-                                    <div class="text-xs font-semibold text-blue-400 mb-1.5 flex items-center gap-1 sticky top-0 bg-slate-800 py-1">
-                                        <span>📋</span>
-                                        <span>Group ${miniPlan.group}</span>
-                                    </div>
-                                    <div class="space-y-1">
-                                        ${miniPlan.steps.map((step, idx) => `
-                                            <div class="flex items-start gap-2 text-xs slide-up" style="animation-delay: ${idx * 0.02}s">
-                                                <span class="text-purple-400 font-bold flex-shrink-0">${idx + 1}.</span>
-                                                <span class="text-slate-300 leading-relaxed">${step}</span>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : `
-                        <div class="bg-slate-800 bg-opacity-30 rounded-lg p-3 text-center">
-                            <div class="text-2xl mb-1 pulse-animate">⏳</div>
-                            <p class="text-xs text-slate-400">Processing...</p>
-                        </div>
-                    `}
-                </div>
-            `;
-        }
-
-        function updateProcessingDisplay() {
-            updateProgressBars();
-            updateLivePlansDisplay();
-            updateFeaturePanel();
-            updateFraudPanel();
-            updateCompetitionPanel();
-        }
-
-        // NEW STOP AND DOWNLOAD FUNCTIONS
-        function stopPlanning() {
-            if (state.isStopping) return;
-            
-            if (!confirm('⚠️ Stop planning?\n\nThis will:\n• Stop all AI agents\n• Keep current progress\n• Allow you to download results')) {
-                return;
-            }
-            
-            setState({ isStopping: true });
-            
-            // Close event source if exists
-            if (state.eventSource) {
-                state.eventSource.close();
-                state.eventSource = null;
-            }
-            
-            // Move to results with current data
-            setTimeout(() => {
-                const currentResults = {};
-                let agentNum = 1;
-                
-                for (const [agent, planData] of Object.entries(state.liveAgentPlans)) {
-                    if (planData.final_plan || planData.mini_plans.length > 0) {
-                        currentResults[`agent${agentNum}`] = {
-                            agent_name: agent,
-                            steps: planData.steps || {},
-                            original_score: planData.score || 0,
-                            final_score: planData.final_score || planData.score || 0,
-                            average_score: planData.average_score || planData.score || 0,
-                            all_improvement_scores: planData.all_scores || [planData.score || 0],
-                            total_improvements: (planData.improvements || []).length
-                        };
-                        agentNum++;
-                    }
-                }
-                
-                setState({ 
-                    apiResponse: currentResults,
-                    phase: 'results',
-                    isLoading: false,
-                    isStopping: false
-                });
-                
-                addLogMessage('⏹️ Planning stopped by user', 'info');
-            }, 500);
-        }
-
-        function downloadAnalysis() {
-            const data = {
-                aim: state.aim,
-                steps: state.steps,
-                discoveredFeatures: state.discoveredFeatures,
-                featureCount: state.featureCount,
-                competitionData: state.competitionData,
-                fraudDetections: state.fraudDetections,
-                techSuggestions: state.techSuggestions,
-                safetyNodes: state.safetyNodes,
-                agentPlans: state.liveAgentPlans,
-                finalResults: state.apiResponse,
-                timestamp: new Date().toISOString(),
-                user: state.currentUser
-            };
-            
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `ai-planner-analysis-${Date.now()}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            addLogMessage('📥 Analysis downloaded successfully', 'success');
-        }
-
-        // UPDATED PROCESSING PHASE WITH 3-PANEL LAYOUT
-        function renderProcessingPhase() {
-            return `
-                <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
-                    <!-- Left Sidebar (1 column) - UPDATED WITH STOP & DOWNLOAD BUTTONS -->
-                    <div class="xl:col-span-1 space-y-4">
-                        <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-xl p-4 border border-slate-700">
-                            <div class="text-center mb-3">
-                                <div class="text-3xl mb-2 pulse-animate">🧠</div>
-                                <h2 class="text-lg font-bold mb-1">Processing</h2>
-                                ${state.currentPhase ? `
-                                    <div class="mt-2 px-3 py-1 bg-purple-500 bg-opacity-20 rounded-lg inline-block text-xs">
-                                        <span class="text-purple-400 font-semibold">Phase ${state.currentPhase}</span>
-                                    </div>
-                                ` : ''}
-                            </div>
-
-                            <!-- Control Buttons -->
-                            <div class="space-y-2 mb-4">
-                                <button 
-                                    onclick="stopPlanning()"
-                                    ${state.isStopping ? 'disabled' : ''}
-                                    class="w-full py-2 bg-red-500 bg-opacity-20 hover:bg-opacity-30 disabled:bg-opacity-10 rounded-lg transition-all text-red-400 font-semibold text-sm flex items-center justify-center gap-2"
-                                >
-                                    <span class="text-lg">⏹️</span>
-                                    <span>${state.isStopping ? 'Stopping...' : 'Stop Planning'}</span>
-                                </button>
-                                
-                                <button 
-                                    onclick="downloadAnalysis()"
-                                    class="w-full py-2 bg-green-500 bg-opacity-20 hover:bg-opacity-30 rounded-lg transition-all text-green-400 font-semibold text-sm flex items-center justify-center gap-2"
-                                >
-                                    <span class="text-lg">📥</span>
-                                    <span>Download Analysis</span>
-                                </button>
-                            </div>
-
-                            <div id="agentProgressContainer" class="space-y-1.5">
-                            </div>
-                        </div>
-
-                        <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-xl p-4 border border-slate-700 max-h-[600px] overflow-y-auto">
-                            <h3 class="text-sm font-semibold text-slate-400 uppercase mb-3 flex items-center gap-2">
-                                <span class="text-lg">📋</span>
-                                Mini Plans
-                            </h3>
-                            <div id="livePlansContainer" class="space-y-3">
-                            </div>
-                        </div>
-
-                        <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-xl p-4 border border-slate-700">
-                            <h3 class="text-xs font-semibold text-slate-400 uppercase mb-2 flex items-center gap-2">
-                                <span class="w-2 h-2 bg-red-500 rounded-full pulse-animate"></span>
-                                Activity Log
-                            </h3>
-                            <div id="realtimeLog" class="h-64 overflow-y-auto space-y-1 bg-slate-900 bg-opacity-30 rounded-lg p-2 scroll-smooth text-xs">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Center Area (3 columns) - 3 PANEL LAYOUT -->
-                    <div class="xl:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-4">
-                        <!-- Features Panel (Left) -->
-                        <div class="feature-panel bg-gradient-to-br from-pink-900 via-purple-900 to-slate-900 bg-opacity-60 backdrop-blur-xl rounded-2xl p-6 border-2 border-pink-500 border-opacity-40 shadow-2xl">
-                            <div class="flex items-center justify-between mb-4 pb-3 border-b border-pink-500 border-opacity-30">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-12 h-12 bg-gradient-to-br from-pink-500 to-purple-600 rounded-xl flex items-center justify-center text-3xl shadow-lg">
-                                        ✨
-                                    </div>
-                                    <div>
-                                        <h2 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400">
-                                            Features
-                                        </h2>
-                                        <p class="text-slate-300 text-xs mt-0.5">Discovery System</p>
-                                    </div>
-                                </div>
-                                <div class="text-center">
-                                    <div class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-pink-400 via-purple-400 to-pink-300" 
-                                         id="featureCounter">${state.featureCount}</div>
-                                </div>
-                            </div>
-                            <div id="featureList" class="space-y-2 max-h-[700px] overflow-y-auto scroll-smooth pr-2">
-                            </div>
-                        </div>
-
-                        <!-- Competition Panel (Center) -->
-                        <div class="feature-panel bg-gradient-to-br from-blue-900 via-cyan-900 to-slate-900 bg-opacity-60 backdrop-blur-xl rounded-2xl p-6 border-2 border-blue-500 border-opacity-40 shadow-2xl">
-                            <div class="flex items-center justify-between mb-4 pb-3 border-b border-blue-500 border-opacity-30">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center text-3xl shadow-lg">
-                                        🏢
-                                    </div>
-                                    <div>
-                                        <h2 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
-                                            Competition
-                                        </h2>
-                                        <p class="text-slate-300 text-xs mt-0.5">Market Analysis</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div id="competitionPanel" class="max-h-[700px] overflow-y-auto scroll-smooth pr-2">
-                            </div>
-                        </div>
-
-                        <!-- Fraud Panel (Right) -->
-                        <div class="bg-gradient-to-br from-red-900 via-slate-900 to-slate-900 bg-opacity-60 backdrop-blur-xl rounded-2xl p-6 border-2 border-red-500 border-opacity-40 shadow-2xl">
-                            <div class="flex items-center justify-between mb-4 pb-3 border-b border-red-500 border-opacity-30">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-600 rounded-xl flex items-center justify-center text-3xl">
-                                        🛡️
-                                    </div>
-                                    <div>
-                                        <h2 class="text-2xl font-bold text-red-300">Fraud</h2>
-                                        <p class="text-slate-400 text-xs">Security</p>
-                                    </div>
-                                </div>
-                                <div class="text-center">
-                                    <div class="text-4xl font-bold text-red-400" id="fraudAlertCounter">${state.fraudAlertCount}</div>
-                                </div>
-                            </div>
-                            <div id="fraudDetectionList" class="space-y-3 max-h-[700px] overflow-y-auto scroll-smooth">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        async function handleLogin(e) {
-            e.preventDefault();
-            setState({ isLoading: true });
-
-            try {
-                const response = await fetch('http://localhost:5000/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        username: state.username,
-                        password: state.password
-                    })
-                });
-
-                const data = await response.json();
-
-                if (response.ok && data.success) {
-                    setState({
-                        currentUser: data.username,
-                        isAuthenticated: true,
-                        password: '',
-                        isLoading: false
-                    });
-                } else {
-                    alert(data.message || 'Invalid credentials');
-                    setState({ isLoading: false });
-                }
-            } catch (error) {
-                alert('Unable to connect to server');
-                setState({ isLoading: false });
-            }
-        }
-
-        async function handleSignup(e) {
-            e.preventDefault();
-            setState({ isLoading: true });
-
-            try {
-                const response = await fetch('http://localhost:5000/api/signup', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        username: state.username,
-                        email: state.email,
-                        password: state.password
-                    })
-                });
-
-                const data = await response.json();
-
-                if (response.ok && data.success) {
-                    alert('Account created! Please login.');
-                    setState({
-                        showLogin: true,
-                        username: '',
-                        password: '',
-                        email: '',
-                        isLoading: false
-                    });
-                } else {
-                    alert(data.message || 'Signup failed');
-                    setState({ isLoading: false });
-                }
-            } catch (error) {
-                alert('Unable to connect to server');
-                setState({ isLoading: false });
-            }
-        }
-
-        function handleLogout() {
-            setState({
-                isAuthenticated: false,
-                currentUser: null,
-                username: '',
-                password: '',
-                email: '',
-                phase: 'input',
-                aim: '',
-                steps: { step1: '', step2: '' },
-                apiResponse: null,
-                liveAgentPlans: {},
-                analyticsData: {},
-                discoveredFeatures: [],
-                featureCount: 0,
-                naturalLanguageInput: '',
-                showConfirmation: false,
-                fraudDetections: [],
-                fraudAlertCount: 0,
-                techSuggestions: [],
-                safetyNodes: [],
-                toolName: '',
-                isToolProcessing: false,
-                activeTool: null,
-                toolProcessingStatus: '',
-                competitionData: {
-                    aim: null,
-                    steps: [],
-                    summary: null
-                },
-                showCompetitionPanel: true
-            });
-        }
-
-        function addStep() {
-            const stepKeys = Object.keys(state.steps);
-            const nextStepNum = stepKeys.length + 1;
-            state.steps['step' + nextStepNum] = '';
-            render();
-        }
-
-        function removeStep(key) {
-            const newSteps = { ...state.steps };
-            delete newSteps[key];
-
-            const stepValues = Object.values(newSteps);
-            const renumberedSteps = {};
-            stepValues.forEach((value, index) => {
-                renumberedSteps['step' + (index + 1)] = value;
-            });
-
-            state.steps = Object.keys(renumberedSteps).length > 0 ? renumberedSteps : { step1: '' };
-            render();
-        }
-
-        function getWinner() {
-            if (!state.apiResponse) return null;
-
-            const agents = Object.keys(state.apiResponse).filter(key => key.startsWith('agent'));
-            let winner = null;
-            let maxAvg = -1;
-
-            agents.forEach(agentKey => {
-                const agent = state.apiResponse[agentKey];
-                const avg = agent.average_score || 0;
-
-                if (avg > maxAvg) {
-                    maxAvg = avg;
-                    winner = { ...agent, agentKey, avgScore: avg };
-                }
-            });
-
-            return winner;
-        }
-
-        function reset() {
-            setState({
-                phase: 'input',
-                aim: '',
-                steps: { step1: '', step2: '' },
-                apiResponse: null,
-                liveAgentPlans: {},
-                analyticsData: {},
-                discoveredFeatures: [],
-                featureCount: 0,
-                naturalLanguageInput: '',
-                showConfirmation: false,
-                fraudDetections: [],
-                fraudAlertCount: 0,
-                techSuggestions: [],
-                safetyNodes: [],
-                toolName: '',
-                isToolProcessing: false,
-                activeTool: null,
-                toolProcessingStatus: '',
-                competitionData: {
-                    aim: null,
-                    steps: [],
-                    summary: null
-                },
-                showCompetitionPanel: true
-            });
-        }
-
-        function render() {
-            const app = document.getElementById('app');
-            
-            if (!state.isAuthenticated) {
-                app.innerHTML = renderAuthScreen();
-            } else {
-                app.innerHTML = renderMainApp();
-            }
-            
-            attachEventListeners();
-        }
-
-        function renderAuthScreen() {
-            return `
-                <div class="min-h-screen flex items-center justify-center p-8 text-white">
-                    <div class="w-full max-w-md">
-                        <div class="text-center mb-8">
-                            <div class="w-16 h-16 bg-purple-500 rounded-full mx-auto mb-4 flex items-center justify-center text-4xl">🧠</div>
-                            <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-2">AI Planner</h1>
-                            <p class="text-slate-400">Feature Detection + Fraud Detection System</p>
-                        </div>
-
-                        <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border border-slate-700 shadow-2xl">
-                            <div class="flex gap-2 mb-6">
-                                <button onclick="setState({ showLogin: true })" class="flex-1 py-2 rounded-lg font-semibold transition-all ${state.showLogin ? 'bg-purple-600 text-white' : 'bg-slate-700 bg-opacity-50 text-slate-400'}">
-                                    Login
-                                </button>
-                                <button onclick="setState({ showLogin: false })" class="flex-1 py-2 rounded-lg font-semibold transition-all ${!state.showLogin ? 'bg-purple-600 text-white' : 'bg-slate-700 bg-opacity-50 text-slate-400'}">
-                                    Sign Up
-                                </button>
-                            </div>
-
-                            <form id="authForm" class="space-y-4">
-                                <div>
-                                    <label class="block text-sm font-medium mb-2 text-slate-300">Username</label>
-                                    <input type="text" id="username" value="${state.username}" required class="w-full px-4 py-3 bg-slate-900 bg-opacity-50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Enter username" />
-                                </div>
-
-                                ${!state.showLogin ? `
-                                <div>
-                                    <label class="block text-sm font-medium mb-2 text-slate-300">Email</label>
-                                    <input type="email" id="email" value="${state.email}" required class="w-full px-4 py-3 bg-slate-900 bg-opacity-50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Enter email" />
-                                </div>
-                                ` : ''}
-
-                                <div>
-                                    <label class="block text-sm font-medium mb-2 text-slate-300">Password</label>
-                                    <input type="password" id="password" value="${state.password}" required class="w-full px-4 py-3 bg-slate-900 bg-opacity-50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Enter password" />
-                                </div>
-
-                                <button type="submit" ${state.isLoading ? 'disabled' : ''} class="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-slate-600 disabled:to-slate-600 rounded-xl font-semibold transition-all shadow-lg">
-                                    ${state.isLoading ? 'Processing...' : state.showLogin ? 'Login' : 'Sign Up'}
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderMainApp() {
-            return `
-                <div class="p-8">
-                    <div class="max-w-7xl mx-auto text-white">
-                        <div class="flex items-center justify-between mb-8 flex-wrap gap-4">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-2xl">🧠</div>
-                                <div>
-                                    <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">AI Collaborative Planner</h1>
-                                    <p class="text-slate-400 text-sm">Feature Detection + Fraud Detection + Real-time Generation</p>
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-4">
-                                <div class="flex items-center gap-2 px-4 py-2 bg-slate-800 bg-opacity-50 rounded-lg border border-slate-700">
-                                    <span class="text-2xl">👤</span>
-                                    <span class="text-slate-300">${state.currentUser}</span>
-                                </div>
-                                <button onclick="handleLogout()" class="flex items-center gap-2 px-4 py-2 bg-red-500 bg-opacity-20 hover:bg-opacity-30 rounded-lg transition-colors text-red-400">
-                                    <span>Logout</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        ${state.showConfirmation ? renderConfirmationScreen() : ''}
-                        ${!state.showConfirmation && state.phase === 'input' ? renderInputPhase() : ''}
-                        ${!state.showConfirmation && state.phase === 'processing' ? renderProcessingPhase() : ''}
-                        ${!state.showConfirmation && state.phase === 'results' ? renderResultsPhase() : ''}
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderInputPhase() {
-            const isAimValid = state.aim.trim().length > 0;
-            const areStepsValid = Object.values(state.steps).every(s => s.trim().length > 0);
-            const isFormValid = isAimValid && areStepsValid;
-            
-            return `
-                <div class="space-y-6">
-                    <!-- Active Tool Display -->
-                    ${state.activeTool ? `
-                        <div class="bg-white bg-opacity-10 backdrop-blur-lg rounded-xl p-4 border-2 border-blue-400 border-opacity-50 shadow-lg slide-up">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-12 h-12 bg-blue-500 bg-opacity-20 rounded-lg flex items-center justify-center">
-                                        <span class="text-2xl">🔧</span>
-                                    </div>
-                                    <div>
-                                        <div class="text-xs text-blue-300 font-semibold uppercase">Active Tool</div>
-                                        <div class="text-blue-200 font-bold text-xl">${state.activeTool.name}</div>
-                                        <div class="text-blue-400 text-xs mt-0.5">Parameters loaded and ready</div>
-                                    </div>
-                                </div>
-                                <button 
-                                    onclick="removeTool()"
-                                    class="group w-10 h-10 bg-red-500 bg-opacity-10 hover:bg-opacity-30 rounded-lg flex items-center justify-center transition-all border border-red-500 border-opacity-30 hover:border-opacity-60"
-                                    title="Remove tool and clear all data"
-                                >
-                                    <span class="text-red-400 group-hover:text-red-300 text-xl font-bold">✕</span>
-                                </button>
-                            </div>
-                        </div>
-                    ` : ''}
-
-                    <!-- Tool Input Section -->
-                    <div class="bg-gradient-to-br from-purple-900 via-indigo-900 to-slate-900 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border-2 border-purple-500 border-opacity-30 shadow-2xl">
-                        <div class="flex items-center gap-3 mb-6">
-                            <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
-                                <span class="text-3xl">🔧</span>
-                            </div>
-                            <div>
-                                <h2 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-pink-300">Software Tool Integration</h2>
-                                <p class="text-slate-400 text-sm">Add a tool to enhance planning with tool-specific parameters</p>
-                            </div>
-                        </div>
-                        
-                        <div class="space-y-4">
-                            <!-- Tool Name Input Box -->
-                            <div>
-                                <label class="block text-sm font-semibold text-purple-300 mb-2 flex items-center gap-2">
-                                    <span>🎯</span>
-                                    <span>Enter Software/Tool Name</span>
-                                </label>
-                                <input 
-                                    type="text" 
-                                    id="toolNameInput" 
-                                    value="${state.toolName}"
-                                    placeholder="e.g., Adobe Photoshop, Figma, Microsoft Excel, Blender, AutoCAD..." 
-                                    class="w-full px-5 py-4 bg-slate-900 bg-opacity-60 border-2 border-purple-500 border-opacity-30 focus:border-opacity-60 rounded-xl text-white text-lg placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
-                                    ${state.isToolProcessing ? 'disabled' : ''}
-                                    oninput="handleToolNameInput(event)"
-                                    onkeypress="if(event.key === 'Enter') processTool()"
-                                />
-                                <p class="text-xs text-slate-500 mt-2 flex items-center gap-1">
-                                    <span>💡</span>
-                                    <span>Enter any software name to automatically extract all its tools and parameters</span>
-                                </p>
-                            </div>
-                            
-                            <!-- Add Tool Button -->
-                            <button 
-                                onclick="processTool()"
-                                ${state.isToolProcessing || !state.toolName.trim() ? 'disabled' : ''}
-                                class="w-full py-4 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-700 hover:via-pink-700 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed rounded-xl font-bold text-lg transition-all shadow-xl flex items-center justify-center gap-3"
-                            >
-                                ${state.isToolProcessing ? `
-                                    <div class="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
-                                    <span>Processing Tool...</span>
-                                ` : `
-                                    <span class="text-2xl">✨</span>
-                                    <span>Add Tool</span>
-                                `}
-                            </button>
-                            
-                            <!-- Processing Status -->
-                            ${state.isToolProcessing ? `
-                                <div class="bg-yellow-500 bg-opacity-10 border-2 border-yellow-500 border-opacity-30 rounded-xl p-4 slide-up">
-                                    <div class="flex items-start gap-3">
-                                        <div class="w-6 h-6 border-3 border-yellow-400 border-t-transparent rounded-full animate-spin flex-shrink-0 mt-0.5"></div>
-                                        <div>
-                                            <p class="text-yellow-300 font-semibold mb-1">🔍 Extracting Tool Information...</p>
-                                            <p class="text-yellow-200 text-sm mb-2">
-                                                ${state.toolProcessingStatus || 'Discovering tools, features, and parameters from the software...'}
-                                            </p>
-                                            <p class="text-yellow-400 text-xs">
-                                                ⏱️ This may take 2-5 minutes depending on software complexity.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            ` : ''}
-                            
-                            <!-- Info Box -->
-                            <div class="bg-blue-500 bg-opacity-10 border border-blue-500 border-opacity-30 rounded-xl p-4">
-                                <div class="flex items-start gap-3">
-                                    <span class="text-2xl flex-shrink-0">💡</span>
-                                    <div class="text-sm">
-                                        <p class="text-blue-300 font-semibold mb-2">How it works:</p>
-                                        <ol class="text-slate-300 space-y-1.5 list-decimal list-inside">
-                                            <li>AI identifies all tools and features (10 at a time)</li>
-                                            <li>Extracts parameters from each discovered tool</li>
-                                            <li>Saves to Excel files: tool_name.xlsx & parameter.xlsx</li>
-                                            <li>Parameters automatically merge during plan generation</li>
-                                        </ol>
-                                        <p class="text-slate-400 text-xs mt-3">
-                                            📂 Files saved to: C:\\Users\\LENOVO\\Desktop\\
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Natural Language Section -->
-                    <div class="bg-gradient-to-br from-blue-900 via-purple-900 to-slate-900 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border-2 border-blue-500 border-opacity-30 shadow-2xl">
-                        <div class="flex items-center gap-3 mb-4">
-                            <span class="text-4xl">🧠</span>
-                            <div>
-                                <h2 class="text-2xl font-bold text-blue-300">Quick Start: Natural Language</h2>
-                                <p class="text-slate-400 text-sm">Describe your goal in plain words, and AI will structure it for you</p>
-                            </div>
-                        </div>
-                        
-                        <textarea 
-                            id="naturalLanguageInput" 
-                            placeholder="Example: I want to create a mobile app that helps people track their daily water intake..."
-                            class="w-full h-32 px-6 py-4 bg-slate-900 bg-opacity-50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg resize-none"
-                            ${state.isLoading ? 'disabled' : ''}
-                        ></textarea>
-                        
-                        <div class="flex items-center gap-3 mt-4">
-                            <button 
-                                id="parseButton"
-                                onclick="parseNaturalLanguage()" 
-                                ${state.isLoading ? 'disabled' : ''}
-                                class="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-600 rounded-xl font-semibold transition-all shadow-lg"
-                            >
-                                <span class="text-xl">✨</span>
-                                <span id="parseButtonText">Convert to AIM + Steps</span>
-                            </button>
-                            
-                            <span class="text-slate-400 text-sm">or fill the form below manually</span>
-                        </div>
-                    </div>
-
-                    <div class="flex items-center gap-4">
-                        <div class="flex-1 h-px bg-gradient-to-r from-transparent via-slate-600 to-transparent"></div>
-                        <span class="text-slate-500 text-sm font-semibold">OR ENTER MANUALLY</span>
-                        <div class="flex-1 h-px bg-gradient-to-r from-transparent via-slate-600 to-transparent"></div>
-                    </div>
-
-                    <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border border-slate-700 shadow-2xl">
-                        <div class="mb-8">
-                            <label class="flex items-center gap-2 text-xl font-semibold mb-3">
-                                <span class="text-2xl">🎯</span>
-                                Your Goal
-                            </label>
-                            <input 
-                                type="text" 
-                                id="aim" 
-                                value="${state.aim}" 
-                                placeholder="Enter your main objective..." 
-                                class="w-full px-6 py-4 bg-slate-900 bg-opacity-50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg" 
-                                ${state.isLoading ? 'disabled' : ''}
-                            />
-                        </div>
-
-                        <div class="mb-8">
-                            <label class="flex items-center gap-2 text-xl font-semibold mb-3">
-                                <span class="text-2xl">➡️</span>
-                                Initial Steps
-                            </label>
-                            <div id="stepsContainer">
-                                ${Object.entries(state.steps).map(([key, value], index) => `
-                                    <div class="flex gap-3 mb-3">
-                                        <input 
-                                            type="text" 
-                                            data-step-key="${key}" 
-                                            value="${value}" 
-                                            placeholder="Step ${index + 1}..." 
-                                            class="flex-1 px-6 py-3 bg-slate-900 bg-opacity-50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500" 
-                                            ${state.isLoading ? 'disabled' : ''}
-                                        />
-                                        ${Object.keys(state.steps).length > 1 ? `
-                                            <button 
-                                                onclick="removeStep('${key}')" 
-                                                class="px-4 py-3 bg-red-500 bg-opacity-20 hover:bg-opacity-30 rounded-xl transition-colors text-red-400 font-bold"
-                                                ${state.isLoading ? 'disabled' : ''}
-                                            >
-                                                ✕
-                                            </button>
-                                        ` : ''}
-                                    </div>
-                                `).join('')}
-                            </div>
-                            <button 
-                                onclick="addStep()" 
-                                class="flex items-center gap-2 px-6 py-3 bg-purple-500 bg-opacity-20 hover:bg-opacity-30 rounded-xl transition-colors text-purple-300"
-                                ${state.isLoading ? 'disabled' : ''}
-                            >
-                                <span class="text-xl">➕</span>
-                                Add Step
-                            </button>
-                        </div>
-
-                        <button 
-                            id="planButton" 
-                            onclick="startPlanning()" 
-                            ${!isFormValid || state.isLoading ? 'disabled' : ''} 
-                            class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed rounded-xl font-semibold text-lg transition-all shadow-lg"
-                        >
-                            ${state.isLoading ? '⏳ Processing...' : '✨ Start AI Planning'}
-                        </button>
-                        <p id="errorMsg" style="display: ${isFormValid ? 'none' : 'block'}" class="text-sm text-red-400 mt-2 text-center">
-                            Please fill all fields to continue
-                        </p>
-                    </div>
-                </div>
-            `;
-        }
-
-        function renderResultsPhase() {
-            const winner = getWinner();
-            const agents = Object.keys(state.apiResponse || {}).filter(key => key.startsWith('agent'));
-
-            return `
-                <div class="space-y-6">
-                    ${winner ? `
-                        <div class="bg-gradient-to-r from-yellow-500 from-opacity-20 to-orange-500 to-opacity-20 backdrop-blur-lg rounded-2xl p-8 border border-yellow-500 border-opacity-30 shadow-2xl">
-                            <div class="text-center mb-6">
-                                <div class="text-6xl mb-4">🏆</div>
-                                <h2 class="text-4xl font-bold mb-2">Winner: ${winner.agent_name ? winner.agent_name.toUpperCase() : 'AI Agent ' + winner.agentKey.replace('agent', '')}</h2>
-                                <p class="text-3xl text-yellow-400 font-bold mb-4">Average Score: ${winner.avgScore.toFixed(1)}</p>
-                                <p class="text-slate-400">Original: ${winner.original_score} → Final: ${winner.final_score} (${winner.total_improvements} improvements)</p>
-                            </div>
-
-                            <div class="bg-slate-900 bg-opacity-50 rounded-xl p-6 mt-6">
-                                <h3 class="text-xl font-semibold mb-4 text-yellow-400">Winning Plan Steps:</h3>
-                                <div class="space-y-3">
-                                    ${Object.entries(winner.steps || {}).map(([key, step], idx) => `
-                                        <div class="flex items-start gap-3">
-                                            <div class="w-8 h-8 rounded-full bg-yellow-500 bg-opacity-20 flex items-center justify-center flex-shrink-0">
-                                                <span class="text-yellow-400 font-bold">${idx + 1}</span>
-                                            </div>
-                                            <span class="text-slate-200 text-lg">${step}</span>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        </div>
-                    ` : ''}
-
-                    ${state.discoveredFeatures.length > 0 ? `
-                        <div class="bg-gradient-to-br from-pink-900 via-purple-900 to-slate-900 bg-opacity-50 backdrop-blur-lg rounded-2xl p-8 border border-pink-500 border-opacity-30">
-                            <div class="flex items-center gap-3 mb-6">
-                                <span class="text-5xl">✨</span>
-                                <div>
-                                    <h2 class="text-3xl font-bold text-pink-300">Features Discovered</h2>
-                                    <p class="text-slate-400">Total: ${state.featureCount} features identified</p>
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                ${state.discoveredFeatures.map((featureObj, index) => {
-                                    const feature = featureObj.feature || featureObj;
-                                    const source = featureObj.source || 'unknown';
-                                    const sourceColor = source.includes('aim') ? 'purple' : source.includes('mini_plan') ? 'blue' : 'pink';
-                                    return `
-                                        <div class="bg-gradient-to-r from-${sourceColor}-500 to-pink-500 bg-opacity-10 border border-${sourceColor}-500 border-opacity-30 rounded-lg px-4 py-3">
-                                            <div class="flex items-center gap-2">
-                                                <span class="text-${sourceColor}-400 font-bold text-lg">•</span>
-                                                <span class="text-slate-100 font-medium text-sm">${typeof feature === 'string' ? feature : feature.text || 'Unknown'}</span>
-                                            </div>
-                                        </div>
-                                    `;
-                                }).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        ${agents.map(agentKey => {
-                            const agentData = state.apiResponse[agentKey];
-                            const avgScore = agentData.average_score || 0;
-                            const isWinner = winner && winner.agentKey === agentKey;
-                            
-                            return `
-                                <div class="bg-slate-800 bg-opacity-50 backdrop-blur-lg rounded-xl p-6 border ${isWinner ? 'border-yellow-500 ring-2 ring-yellow-500 ring-opacity-50' : 'border-slate-700'}">
-                                    <div class="flex items-center justify-between mb-4">
-                                        <div>
-                                            <h3 class="font-semibold text-lg">${agentData.agent_name ? agentData.agent_name.toUpperCase() : 'Agent ' + agentKey.replace('agent', '')}</h3>
-                                            <p class="text-sm text-slate-400">AI Agent ${agentKey.replace('agent', '')}</p>
-                                        </div>
-                                        ${isWinner ? '<span class="text-2xl">🏆</span>' : ''}
-                                    </div>
-                                    
-                                    <div class="mb-4">
-                                        <div class="text-3xl font-bold mb-2">
-                                            <span class="text-purple-400">${avgScore.toFixed(1)}</span>
-                                            <span class="text-sm text-slate-400 ml-2">avg score</span>
-                                        </div>
-                                        <div class="text-sm text-slate-400">
-                                            Original: ${agentData.original_score} → Final: ${agentData.final_score}
-                                            <span class="text-green-400 ml-2">+${agentData.final_score - agentData.original_score}</span>
-                                        </div>
-                                    </div>
-
-                                    <div class="mb-4">
-                                        <h4 class="text-xs font-semibold text-slate-500 uppercase mb-2">Action Plan (${Object.keys(agentData.steps || {}).length} steps):</h4>
-                                        <div class="space-y-2 max-h-60 overflow-y-auto">
-                                            ${Object.entries(agentData.steps || {}).map(([key, step], idx) => `
-                                                <div class="text-sm text-slate-300 flex items-start gap-2 bg-slate-900 bg-opacity-30 p-2 rounded">
-                                                    <span class="text-purple-400 font-bold flex-shrink-0">${idx + 1}.</span>
-                                                    <span>${step}</span>
-                                                </div>
-                                            `).join('')}
-                                        </div>
-                                    </div>
-
-                                    <div class="space-y-2">
-                                        <h4 class="text-xs font-semibold text-slate-500 uppercase">Score Progress:</h4>
-                                        <div class="flex flex-wrap gap-2">
-                                            ${(agentData.all_improvement_scores || []).map((score, idx) => `
-                                                <div class="px-3 py-1 bg-slate-900 bg-opacity-50 rounded-lg text-sm">
-                                                    <span class="text-slate-400">${idx === 0 ? 'Orig' : `R${idx}`}:</span>
-                                                    <span class="ml-2 font-bold text-purple-400">${score}</span>
-                                                </div>
-                                            `).join('')}
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-
-                    <button onclick="reset()" class="w-full py-4 bg-slate-700 hover:bg-slate-600 rounded-xl font-semibold text-lg transition-all">
-                        ⚡ Start New Plan
-                    </button>
-                </div>
-            `;
-        }
-
-        function attachEventListeners() {
-            const authForm = document.getElementById('authForm');
-            if (authForm) {
-                authForm.onsubmit = state.showLogin ? handleLogin : handleSignup;
-            }
-
-            const usernameInput = document.getElementById('username');
-            if (usernameInput) {
-                usernameInput.oninput = (e) => {
-                    state.username = e.target.value;
-                };
-            }
-
-            const emailInput = document.getElementById('email');
-            if (emailInput) {
-                emailInput.oninput = (e) => {
-                    state.email = e.target.value;
-                };
-            }
-
-            const passwordInput = document.getElementById('password');
-            if (passwordInput) {
-                passwordInput.oninput = (e) => {
-                    state.password = e.target.value;
-                };
-            }
-
-            const aimInput = document.getElementById('aim');
-            if (aimInput) {
-                aimInput.oninput = (e) => {
-                    state.aim = e.target.value;
-                    updateButtonState();
-                };
-            }
-
-            const stepInputs = document.querySelectorAll('[data-step-key]');
-            stepInputs.forEach(input => {
-                input.oninput = (e) => {
-                    const key = e.target.getAttribute('data-step-key');
-                    state.steps[key] = e.target.value;
-                    updateButtonState();
-                };
-            });
-
-            // Tool name input listener
-            const toolInput = document.getElementById('toolNameInput');
-            if (toolInput) {
-                toolInput.oninput = (e) => {
-                    state.toolName = e.target.value;
-                };
-            }
-        }
-
-        function updateButtonState() {
-            const button = document.querySelector('#planButton');
-            const errorMsg = document.querySelector('#errorMsg');
-            
-            if (button && errorMsg) {
-                const isAimValid = state.aim.trim().length > 0;
-                const areStepsValid = Object.values(state.steps).every(s => s.trim().length > 0);
-                const isFormValid = isAimValid && areStepsValid;
-                
-                button.disabled = !isFormValid || state.isLoading;
-                errorMsg.style.display = isFormValid ? 'none' : 'block';
-            }
-        }
-
-        // Tool Management Functions
-        function handleToolNameInput(event) {
-            state.toolName = event.target.value;
-            // Force re-render to update button state
-            const button = document.querySelector('button[onclick="processTool()"]');
-            if (button) {
-                button.disabled = state.isToolProcessing || !state.toolName.trim();
-            }
-        }
-
-        async function processTool() {
-            const toolName = document.getElementById('toolNameInput')?.value.trim();
-            
-            if (!toolName) {
-                alert('⚠️ Please enter a tool name first');
-                return;
-            }
-            
-            if (toolName.length < 3) {
-                alert('⚠️ Please enter a valid tool name (at least 3 characters)');
-                return;
-            }
-            
-            setState({ 
-                isToolProcessing: true,
-                toolProcessingStatus: 'Starting tool extraction...'
-            });
-            
-            try {
-                const response = await fetch('http://localhost:5000/api/process-tool', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        tool_name: toolName 
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok && data.success) {
-                    setState({
-                        activeTool: {
-                            name: toolName,
-                            toolPath: data.tool_path,
-                            paramPath: data.param_path
-                        },
-                        toolName: '',
-                        isToolProcessing: false,
-                        toolProcessingStatus: ''
-                    });
-                    
-                    // Save to cookies (expires in 24 hours)
-                    document.cookie = `activeTool=${encodeURIComponent(JSON.stringify(state.activeTool))}; path=/; max-age=86400`;
-                    
-                    alert(`✅ Tool "${toolName}" processed successfully!\n\n📊 Discovered:\n• ${data.tools_found} tools\n• ${data.parameters_found} parameters\n\n💾 Saved to Excel files`);
-                } else {
-                    alert('❌ ' + (data.message || 'Failed to process tool'));
-                    setState({ 
-                        isToolProcessing: false,
-                        toolProcessingStatus: ''
-                    });
-                }
-                
-            } catch (error) {
-                console.error('Tool processing error:', error);
-                alert('❌ Unable to connect to server. Please ensure the backend is running.');
-                setState({ 
-                    isToolProcessing: false,
-                    toolProcessingStatus: ''
-                });
-            }
-        }
-
-        async function removeTool() {
-            if (!state.activeTool) return;
-            
-            if (!confirm(`Remove "${state.activeTool.name}"?\n\nThis will:\n• Clear all extracted tools\n• Clear all parameters\n• Delete Excel file data`)) {
-                return;
-            }
-            
-            try {
-                const response = await fetch('http://localhost:5000/api/remove-tool', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        tool_path: state.activeTool.toolPath,
-                        param_path: state.activeTool.paramPath
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok && data.success) {
-                    setState({ activeTool: null });
-                    document.cookie = 'activeTool=; path=/; max-age=0';
-                    alert('✅ Tool removed successfully\n\n📂 Excel files cleared');
-                } else {
-                    alert('⚠️ ' + (data.message || 'Failed to remove tool'));
-                }
-                
-            } catch (error) {
-                console.error('Remove tool error:', error);
-                setState({ activeTool: null });
-                document.cookie = 'activeTool=; path=/; max-age=0';
-                alert('⚠️ Tool removed from app\n(Server cleanup may have failed)');
-            }
-        }
-
-        // Load active tool from cookies on page load
-        function loadToolFromCookies() {
-            const cookies = document.cookie.split(';');
-            for (let cookie of cookies) {
-                const [name, value] = cookie.trim().split('=');
-                if (name === 'activeTool' && value) {
-                    try {
-                        state.activeTool = JSON.parse(decodeURIComponent(value));
-                        console.log('✅ Loaded tool from cookies:', state.activeTool.name);
-                    } catch (e) {
-                        console.error('Error loading tool from cookies:', e);
-                        document.cookie = 'activeTool=; path=/; max-age=0';
-                    }
-                }
-            }
-        }
-
-        // Load tool on page initialization
-        loadToolFromCookies();
-        document.addEventListener('DOMContentLoaded', render);
-        render();
-    </script>
+<body>
+
+  <header class="main-header">
+    <div class="header-inner">
+      <a href="#" class="header-logo-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+        <span>IPU Results</span>
+      </a>
+      <nav class="header-nav">
+        <a href="#">Home</a>
+        <a href="#">About</a>
+        <a href="#">Contact</a>
+        <a href="#">Privacy</a>
+      </nav>
+      <div class="header-extra">
+        <a href="#" class="internals-nav-pill">
+          <span>Check Internals</span>
+          <span class="new-badge">NEW</span>
+        </a>
+      </div>
+      <button class="mobile-menu-toggle" aria-label="Toggle Menu">☰</button>
+    </div>
+  </header>
+
+  <div class="login-container">
+    <div class="login-wrapper">
+      <div class="login-header">
+        <div class="login-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+        </div>
+        <h1>IPU Results Portal</h1>
+      </div>
+
+      <form class="login-card" onsubmit="return login(event);">
+        <div class="form-group">
+          <label class="form-label" for="username">Enrollment Number</label>
+          <input type="text" id="username" class="form-input" placeholder="Enter your enrollment number" autocomplete="username" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <div class="password-input-wrapper">
+            <input type="password" id="password" class="form-input" placeholder="Enter your password" autocomplete="current-password" />
+            <button type="button" class="btn-password-toggle" onclick="togglePassword()" aria-label="Show password">
+              <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Security Captcha</label>
+          <div class="captcha-container">
+            <div class="captcha-image" tabindex="0" role="button" onclick="loadCaptcha()" aria-label="Click to load captcha">
+              <div id="captchaPlaceholder" class="captcha-placeholder">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <span>Click to Load Captcha</span>
+              </div>
+              <div id="captchaLoader" class="captcha-loader" style="display:none;">
+                <svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                <span>Loading captcha...</span>
+              </div>
+              <span id="captchaText" style="display:none;font-weight:700;letter-spacing:3px;font-size:1.1rem;"></span>
+            </div>
+            <button type="button" class="btn-reload" onclick="loadCaptcha()" aria-label="Reload captcha">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="captcha">Enter Captcha</label>
+          <input type="text" id="captcha" class="form-input" placeholder="Enter the captcha shown above" autocomplete="off" />
+        </div>
+
+        <button type="submit" class="btn-primary">Fetch Result</button>
+        <p id="status" class="status-message"></p>
+      </form>
+    </div>
+  </div>
+
+  <section class="resources-section">
+    <div class="resources-container">
+      <div class="section-header">
+        <h2>Academics &amp; Resources</h2>
+        <p>Quick access to official GGSIPU academic resources and portals.</p>
+      </div>
+      <div class="resources-grid">
+        <a href="#" class="resource-card calculator-card-wide">
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>CGPA Calculator</h3>
+          <p>Calculate your expected CGPA and learn the official grading formula with our precise tool.</p>
+        </a>
+        <a href="#" class="resource-card">
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Notice Board</h3>
+          <p>Check the most recent academic announcements and official news.</p>
+        </a>
+        <a href="#" class="resource-card">
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Examination Notices</h3>
+          <p>Stay updated with datesheets, exam centers, and result notifications.</p>
+        </a>
+        <a href="#" class="resource-card">
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Official Syllabus</h3>
+          <p>Download the latest scheme and syllabus for all GGSIPU programs.</p>
+        </a>
+        <a href="#" class="resource-card">
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Help &amp; FAQ</h3>
+          <p>Commonly asked questions about results, login, and portal usage.</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-section">
+        <h4>About Portal</h4>
+        <p style="font-size:.85rem;line-height:1.6;">The ultimate dashboard for GGSIPU students. Fast, secure, and insightful academic records at your fingertips.</p>
+      </div>
+      <div class="footer-section">
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a href="#">About Us</a></li>
+          <li><a href="#">Contact Us</a></li>
+          <li><a href="#">Disclaimer</a></li>
+        </ul>
+      </div>
+      <div class="footer-section">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="#">Privacy Policy</a></li>
+          <li><a href="#">Terms of Service</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 IPU Results Portal. All rights reserved.</p>
+      <p style="margin-top:10px;opacity:.6;">This site is for demo purposes only.</p>
+    </div>
+  </footer>
+
+<script>
+  function togglePassword(){
+    const pw = document.getElementById('password');
+    const eye = document.getElementById('eyeIcon');
+    if(pw.type === 'password'){ pw.type='text'; } else { pw.type='password'; }
+  }
+
+  function randCaptcha(len){
+    const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let out='';
+    for(let i=0;i<len;i++) out += chars[Math.floor(Math.random()*chars.length)];
+    return out;
+  }
+
+  let currentCaptcha = '';
+
+  function loadCaptcha(){
+    const placeholder = document.getElementById('captchaPlaceholder');
+    const loader = document.getElementById('captchaLoader');
+    const text = document.getElementById('captchaText');
+    placeholder.style.display='none';
+    text.style.display='none';
+    loader.style.display='flex';
+    setTimeout(()=>{
+      currentCaptcha = randCaptcha(6);
+      text.textContent = currentCaptcha;
+      loader.style.display='none';
+      text.style.display='inline';
+    }, 600);
+  }
+
+  function login(e){
+    e.preventDefault();
+    const status = document.getElementById('status');
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const captchaInput = document.getElementById('captcha').value.trim();
+
+    if(!username || !password){
+      status.textContent = 'Please enter enrollment number and password.';
+      status.style.color = '#dc2626';
+      return false;
+    }
+    if(!currentCaptcha){
+      status.textContent = 'Please load and enter the captcha first.';
+      status.style.color = '#dc2626';
+      return false;
+    }
+    if(captchaInput.toUpperCase() !== currentCaptcha){
+      status.textContent = 'Incorrect captcha. Please try again.';
+      status.style.color = '#dc2626';
+      loadCaptcha();
+      document.getElementById('captcha').value='';
+      return false;
+    }
+    const btn = document.querySelector('.btn-primary');
+    btn.textContent = 'Fetching...';
+    btn.disabled = true;
+    status.textContent = '';
+    status.style.color = '';
+
+    setTimeout(() => {
+      btn.textContent = 'Fetch Result';
+      btn.disabled = false;
+      showServerAlert();
+    }, 1800);
+    return false;
+  }
+</script>
+
+<script>
+  // Intercept all link clicks
+  document.addEventListener('click', function(e) {
+    const link = e.target.closest('a');
+    if (link) {
+      e.preventDefault();
+      showServerAlert();
+    }
+  });
+
+  function showServerAlert() {
+    const existing = document.getElementById('server-alert');
+    if (existing) existing.remove();
+
+    const alert = document.createElement('div');
+    alert.id = 'server-alert';
+    alert.innerHTML = `
+      <div style="
+        position:fixed; top:0; left:0; width:100%; height:100%;
+        background:rgba(0,0,0,0.5); z-index:99999;
+        display:flex; align-items:center; justify-content:center;
+        backdrop-filter:blur(4px);
+      " onclick="this.parentElement.remove()">
+        <div onclick="event.stopPropagation()" style="
+          background:#fff; border-radius:14px; padding:30px 28px;
+          max-width:360px; width:90%; box-shadow:0 20px 50px rgba(0,0,0,0.25);
+          text-align:center; font-family:'Segoe UI',Arial,sans-serif;
+        ">
+          <div style="font-size:2.5rem; margin-bottom:10px;">🔴</div>
+          <h3 style="margin:0 0 8px; color:#0f2a4a; font-size:1.2rem;">Server Unreachable</h3>
+          <p style="color:#64748b; font-size:.9rem; margin:0 0 20px; line-height:1.5;">
+            Unable to connect to the server.<br>Please try again after some time.
+          </p>
+          <div style="background:#fef2f2; border:1px solid #fca5a5; border-radius:8px; padding:10px 14px; margin-bottom:20px; font-size:.8rem; color:#b91c1c;">
+            Error 503 — Service Unavailable
+          </div>
+          <button onclick="document.getElementById('server-alert').remove()" style="
+            width:100%; padding:11px; background:#2563eb; color:#fff;
+            border:none; border-radius:8px; font-weight:700;
+            font-size:.95rem; cursor:pointer;
+          ">OK</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(alert);
+  }
+</script>
 </body>
 </html>
